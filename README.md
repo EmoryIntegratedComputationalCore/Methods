@@ -10,5 +10,8 @@ A demonstraton of the R/Bioconductor package baySeq to perform differential expr
 # RNA-Seq Differential Expression Analysis with DESeq2
 A demonstraton of the R/Bioconductor package DEseq2 to perform differential expression analysis from RNA-Seq count data. DESeq2 primarily uses the Wald test to determine differential expression between comparison groups. View the notebook in the link above or click here https://nbviewer.jupyter.org/github/EmoryIntegratedComputationalCore/Methods/blob/master/RNA-SeqDEAnalysiswithDESeq2.ipynb
 
+# RNA-Seq Differential Expression Analysis with edgeR
+A demonstraton of the R/Bioconductor package edgeR to perform differential expression analysis from RNA-Seq count data. edgeR primarily uses the quasi-likelihood F test to determine differential expression between comparison groups. View the notebook in the link above or click here https://nbviewer.jupyter.org/github/EmoryIntegratedComputationalCore/Methods/blob/master/RNA-SeqDEanalysisedgeR.ipynb
+
 # False Discovery Rate Estimation with qvalue
 A demonstraton of the R/Bioconductor package qvalue to estimate global and local false discovery rates from p-values and test statistics calculated from  differential expression analysis. View the notebook in the link above or click here https://nbviewer.jupyter.org/github/EmoryIntegratedComputationalCore/Methods/blob/master/FDRestimationwithqvalue.ipynb
