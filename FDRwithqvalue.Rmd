@@ -1,7 +1,6 @@
 ---
 title: "FDR Estimation with qvalue"
 author: "Jessica Randall"
-date: "October 15, 2019"
 output: 
   html_document:
     theme: "cerulean"
@@ -38,17 +37,18 @@ Our very first step is to load the edgeR and pasilla packages from Bioconductor.
 
 ### Loading R packages 
 
-```{r,message=FALSE, warning=FALSE}
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-BiocManager::install("qvalue")
-library(qvalue)
+```{r load,message=FALSE, warning=FALSE, echo = FALSE}
+require("pacman")
+p_load("here", "readr", "qvalue")
+files <- list(
+  pvalues = here("Emory/EICC/Methods/data/GH_pvals.txt")
+)
 ```
 
 ### Loading p-values
 qvalue gives us a few options for calculating q-values but to keep our example simplified we import a table of p-values from a t-test conducted on RNA-seq count data.
 ```{r, message=FALSE}
-pvalues <- read.delim("D:\\Emory\\EICC\\Rmarkdowns\\GH_pvals.txt", header=TRUE, sep="\t")
+pvalues <- read_delim(files$pvalues, delim = "\t", col_names = TRUE)
 pvalues <- pvalues$pvalue
 ```
 
