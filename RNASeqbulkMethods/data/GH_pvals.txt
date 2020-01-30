@@ -1,4 +1,4 @@
-	pvalue	padj
+genes	pvalue	padj
 Pcyt1a	3.99E-109	8.39E-105
 Senp5	6.40E-108	6.73E-104
 Bdh1	2.18E-96	1.53E-92
