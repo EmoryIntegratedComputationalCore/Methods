@@ -77,7 +77,7 @@ sample_data(GP)$human<-ifelse(human==TRUE, "Human", "Not-Human")
 
 To compare richness estimates within samples we typically provide the Shannon metric but phyloseq also offers the Chao1, ACE, Simpson, or Inverse Simpson metrics. While this dataset does not include control samples we would suggest including Zymo controls, Positive Controls, and Negative Controls in your sequencing along with your experimenatl samples.
 
-Here we have also specified that we would like the Classic ggplot2 theme,which gives a white background with a rainbow of colors for each box plot. This color scheme is customizable and we would be happy to use one to fit your project.
+Here we have also specified that we would like the Classic ggplot2 theme,which gives a white background with a rainbow of colors for each box plot. This color scheme is customizable and we would be happy to use one to fit your project. Please see our Data Visualization Menu linked [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pptx)
 
 ```{r alpha diversity, message=FALSE}
 alpha_meas = c("Shannon")
@@ -166,7 +166,7 @@ plot_bar(GP, x="human", fill="SampleType",
 
 Here we see that Cyanobacteria and Actinobacteria are most abundant in the non-human samples and the Bacteriodetes and Firmicutes are most abundant in the human samples. 
 
-There are many ways to visualize data in phyloseq, these are just a few examples of the typical products of our analytical pipeline at EICC. We would be happy to customize graphs according to your project-specific goals.
+There are many ways to visualize data in phyloseq, these are just a few examples of the typical products of our analytical pipeline at EICC. We would be happy to customize graphs according to your project-specific goals. Check out some additional exmaples from previous projects [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pptx)
 
 ## Statistical Analysis with LDM {-}
 
@@ -300,7 +300,7 @@ head(resqOrdered, 10)
 
 Our results appear to be consistent with what we would expect to be the most abundant taxa in non-human as compared to human samples; Chloroplast. The most significantly abundant bacteria may or may not be the most clinically relevant and this will vary by project. Note that p-values and q-values are from the global omnibus tests. p and q values based on frequency scale data or arcsin-root transformed frequency data are also available. 
 
-We look forward to working with you to customize this pipeline to your experimental design and parameters of interest. For a more specific application and interpretation of these or additional tools and visualizations for your own data, please find our contact information on our [website](https://www.cores.emory.edu/eicc/about/index.html)
+We look forward to working with you to customize this pipeline to your experimental design and parameters of interest. For a more specific application and interpretation of these or additional tools and visualizations for your own data, please find our contact information on our [website](https://www.cores.emory.edu/eicc/about/index.html) and examples of some previous graphs [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pptx)
 
 ### Session information and References {-}
 
