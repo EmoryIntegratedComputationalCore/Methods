@@ -191,7 +191,7 @@ A volcano plot is technically a scatter plot where the x-axis has the log2 trans
 
 There are many more functions and many more specifications to functions than are used here in order to show a simplified example of one of the tools we use for differential expression analysis. Obtaining specific, actionable, and publication quality results from analysis requires a deeper understanding of your specific data set and we would love the opportunity to discuss these options with you.
 
-While we encourage clients to reach out prior to sequencing so that we can collaborate to design the experiment to answer your specific questions, we look forward to hearing from you at any stage of your RNAseq project. Please find our contact information available here https://www.cores.emory.edu/eicc/about/index.html
+While we encourage clients to reach out prior to sequencing so that we can collaborate to design the experiment to answer your specific questions, we look forward to hearing from you at any stage of your RNAseq project. Please find our contact information available on our [website](https://www.cores.emory.edu/eicc/about/index.html)
 
 ### Session information and References {-}
 
@@ -199,6 +199,7 @@ While we encourage clients to reach out prior to sequencing so that we can colla
 (author <- "Jessica Randall")
 date()
 sessionInfo()
+citation("bookdown")
 citation("readr")
 citation("dplyr")
 citation("knitr")

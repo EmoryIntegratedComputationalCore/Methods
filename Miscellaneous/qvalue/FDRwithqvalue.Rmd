@@ -1,21 +1,21 @@
----
-title: "FDR Estimation with qvalue"
-author: "Jessica Randall"
-output: 
-  html_document:
-    theme: "cerulean"
-    toc: true
-    toc_float: TRUE
-    keep_md: true
----
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+
+```{r logo, message = FALSE, echo=FALSE}
+knitr::include_graphics("eicc_logo.png")
 ```
 
-John D. Storey, Andrew J. Bass, Alan Dabney and David Robinson (2019). qvalue: Q-value estimation for false discovery rate control. R package version 2.16.0. http://github.com/jdstorey/qvalue
-The original paper from Storey and Tibshirani introducing the concepts implemented in this package is available here https://www.pnas.org/content/100/16/9440
+---
+title: "False Discovery Rate (FDR) Estimation with qvalue"
+output:
+  bookdown::html_document2:
+    keep_md: yes
+    theme: "paper"
+    highlight: "default"
+    toc: yes
+---
 
-Briefly, qvalue takes in p-values and adjusts them to account for the multiple hypothesis tests. If you are new to multiple hypothesis testing, check out this article from Noble (2009) for a succint overview of the concept. https://www.nature.com/articles/nbt1209-1135
+The original paper from Storey and Tibshirani introducing the concepts implemented in this package is available [here](https://www.pnas.org/content/100/16/9440)
+
+Briefly, [qvalue](http://github.com/jdstorey/qvalue) takes in p-values and adjusts them to account for the multiple hypothesis tests. If you are new to multiple hypothesis testing, check out this [article](https://www.nature.com/articles/nbt1209-1135) from Noble (2009) for a succint overview of the concept.
 
 Multiple hypothesis testing is inherent to RNA-seq differential expression (DE) analysis and we will use this example to illustrate how we use qvalue to provide actionable results to our clients.
 
@@ -26,49 +26,62 @@ In DE analysis, a single p-value tells you how likely it is that a single gene i
 
 False Discovery Rate (FDR) tells you how likely it is that all genes identified as DE are false positives. A FDR of 5% means that among all genes called DE, an average of 5% of those are truly not DE. The q-value is the significance threshold adjusted for the fact that we have assessed muliple genes.
 
-Our very first step is to load the qvalue package rom Bioconductor. Please see http://bioconductor.org/ for information about installation and use of Bioconductor and its packages.
+Our very first step is to load the qvalue package rom Bioconductor. Please see [Bioconductor](http://bioconductor.org/) for information about installation and use of Bioconductor and its packages.
 
-#### Definition of terms
+### Definition of terms
 
-###### Quasi-likeliehood F Test:
+##### Quasi-likeliehood F Test:
+
 Unadjusted p values vs adjusted p values/(FDR): In DE analysis, a single p-value tells you how likely it is that a single gene is differentially expressed between at least two groups (ex: a control and a treatment group) due to some actual difference between the groups as opposed to random chance. False Discovery Rate (FDR) tells you how likely it is that all genes identified as DE are false positives. A FDR of 5% means that among all genes called DE, an average of 5% of those are truly not DE.DE genes are only considered significantly so if they meet the adjusted p value, not only the unadjusted p value.
 
-Our very first step is to load the edgeR and pasilla packages from Bioconductor. Please see http://bioconductor.org/ for information about installation and use of Bioconductor and its packages.
 
 ### Loading R packages 
 
-```{r,message=FALSE, warning=FALSE, echo = FALSE}
+```{r load packs, message=FALSE}
 require("pacman")
-p_load("readr", "here", "dplyr", "qvalue")
+p_load("readr", "here", "dplyr", "ggplot2", "qvalue")
+
 
 files <- list(
-  pvalues = here("GitHub/Methods-1/RNASeqbulkMethods/data/GH_pvals.txt")
+  results = here("Miscellaneous/data/results.txt")
 )
 ```
 
-### Loading p-values
-qvalue gives us a few options for calculating q-values but to keep our example simplified we import a table of p-values from a t-test conducted on RNA-seq count data.
-```{r, message=FALSE}
-pvalues <- readr::read_csv(files$pvalues)
-pvalues <- pvalues$pvalue
+### Loading p-values {-}
+
+qvalue gives us a few options for calculating q-values but to keep our example simplified we import a table of results from a previous differential expression analysis and extract the nominal pvalues as a vector called pvalues. 
+
+```{r load data, message=FALSE}
+
+results <- read_tsv(files$results)
+
+head(results)
+
 ```
 
-### Checking assumptions
+### Checking assumptions {-}
+
 Next, we check out the histogram of the p-values. This allows us to examine the distribution 
 of the p-values and check the package assumption that they should be relatively uniform. 
 This means they will look like one big slope with a high frequency of values of 0.0 (left side) 
 and lower and lower values towards the right of the graph. If this assumption is not met and 
 your p-values look like a U shape, sine curve, or any other funky thing, this package will 
 provide you with faulty analysis if you do not do something to make that assumption hold. 
+
 Please contact EICC and depending on why your p-values are looking unusual we may be able to fix it for you.
-```{r, message=FALSE}
-options(repr.plot.width=2.5, repr.plot.height=2.5)
-hist(pvalues, nclass=20)
+
+```{r histo, message=FALSE, echo = FALSE}
+
+ggplot(results, aes(pvalue)) + 
+  geom_histogram(show.legend = TRUE, na.rm = TRUE, binwidth = 0.05) +
+  theme_classic()
+
 ```
 
 In our example, the p-values are approximately uniform. 
 
-### Creating the qvalue object
+### Creating the qvalue object {-}
+
 Next, we create the qvalue object. qvalue gives us many options to do this. 
 These all matter and all vary by project as to which are appropriate, the default 
 options are not going to work for everyone, if anyone.
@@ -80,7 +93,8 @@ are called DE, we are comfortable with up to 10 of them being false positives. T
 that a popular DE analysis package, edgeR, makes and the accuracy of the results you get from edgeR depend
 on these assumptions.
 
-###### Control vs. Estimation of FDR
+###### Controlling vs. Estimating FDR {-}
+
 In controlling FDR, you set a FDR you are comfortable with a priori, you run your sequencing, 
 you do your pairwise comparisons, and you see which genes meet that pre-specified FDR threshold. 
 In estimating FDR, you run your sequencing, do your pairwise comparisons tests, and afterwards, 
@@ -93,15 +107,22 @@ of them may be false positives. The choice you make depends on whether your expe
 or looking to assess one or a group of genes in particular. EICC would be happy to work with you to 
 design your experiment to meet your goals.
 
-```{r, message=FALSE}
-qobj<-qvalue(p=pvalues, fdr.level=0.1, lambda=0, pi0.method="smoother")
+```{r createqobj, message=FALSE, echo = FALSE}
+
+pvalues <- results$pvalue
+
+qobj <- qvalue(p=pvalues, fdr.level=0.1, lambda=0, pi0.method="smoother")
+
 ```
-### Summarizing results
+
+### Summarizing {-}
 
 Below is a summary of some of the information available to us in the qvalue object.
 
-```{r, message=FALSE}
+```{r qsum, message=FALSE}
+
 summary(qobj)
+
 ```
 
 From this summary we see that at our pre-specified FDR of 0.1 we determine that all genes 
@@ -120,31 +141,36 @@ is a false positive, and comfortable with up to 9 of them being false positives.
 This choice of controlling or estimating FDR is one EICC is happy to help you make to get the most 
 actionable results from your projects.
 
-### Visualization
+### Visualizing {-}
+
 qvalue also offers a number of visualization options to assess your findings. 
 Here is one example of the types of plots you can generate.
 
 Overall, these graphs show us how closely our estimate of the null hypothesis (that no genes are DE) 
 resembles reality, how many genes are DE, and how many false positives we can expect from our q-value cut-off.
 
-```{r, message=FALSE}
-options(repr.plot.width=6, repr.plot.height=5)
+```{r viz, message=FALSE, echo = FALSE}
+
 plot(qobj)
+
 ```
 
-For a more specific application and interpretation of these or additional tools and visualizations for your own data, please find our contact information here https://www.cores.emory.edu/eicc/about/index.html
+For a more specific application and interpretation of these or additional tools and visualizations for your own data, please find our contact information on our [website](https://www.cores.emory.edu/eicc/about/index.html)
 
-Information about our R session is available below
 
-```{r, message=FALSE}
+### Session information and References {-}
+
+```{r sessioninfo, message = FALSE, echo = FALSE}
+(author <- "Jessica Randall")
+date()
 sessionInfo()
+citation("bookdown")
+citation("ggplot2")
+citation("readr")
+citation("dplyr")
+citation("qvalue")
 ```
-
-
-
-
-
-
+<!---- done ---->
 
 
 
