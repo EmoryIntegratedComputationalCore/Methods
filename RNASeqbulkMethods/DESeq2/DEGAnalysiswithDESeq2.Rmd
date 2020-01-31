@@ -16,7 +16,7 @@ The [original paper](https://genomebiology.biomedcentral.com/articles/10.1186/s1
 
 Briefly, DESeq2 uses a Wald test to determine differential gene expression between at least two groups. DESeq2 assumes a negative binomial model which mathematically accounts for the fact that we are assessing gene counts and we are assuming that most genes we are comparing between the groups will not be differential expressed.
 
-Please note that DESeq2 has a number of capabilities that we will not be covering. You can import data for use in DESeq2 in several different ways, there are options for single cell projects, for incorporating Bayesian statistics, for time-series experiments, for outliers, for obtaining all of the results that DESeq2 functions produce, and even more options for graphing (including an R shiny app we plan to cover in a future walk-through) so we strongly encourage you to reach out to EICC with questions regarding options available to you with DESeq2.
+Please note that DESeq2 has a number of capabilities that we will not be covering. You can import data for use in DESeq2 in several different ways, there are options for single cell projects, for incorporating Bayesian statistics, for time-series experiments, for outliers, for obtaining all of the results that DESeq2 functions produce, and even more options for graphing (including an R shiny app we plan to cover in a future walk-through) so we strongly encourage you to reach out to EICC with questions regarding options available to you with DESeq2. Check out some of the graphs from previous projects [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pptx).
 
 ### Definition of terms {-}
 
@@ -137,7 +137,7 @@ stopifnot(nrow(res_df) == 14599 & ncol(res_df) == 7)
 
 ### Visualizing {-}
 
-We now perform additional data visualizations. Typically we provide PCA plots, heat maps, and volcano plots and we would be happy to work with you to customize these for publication. Please see our Data Visualization menu for more options and examples from previous projects.
+We now perform additional data visualizations. Typically we provide PCA plots, heat maps, and volcano plots and we would be happy to work with you to customize these for publication. Please see our Data Visualization [menu](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pptx) for more options and examples from previous projects.
 
 For our heat maps, we typically show the mean normalized counts of the samples. Since we want to use the vsd transformed data from the results and it's currently in special Bioconductor format, we extract those transformed counts from that format and use it in the more common data frame format. 
 
@@ -193,7 +193,7 @@ EnhancedVolcano(res,
 
 There are many more functions and many more specifications to functions than are used here in order to show a simplified example of one of the tools we use for differential expression analysis. Obtaining specific, actionable, and publication quality results from analysis requires a deeper understanding of your specific data set and we would love the opportunity to discuss these options with you.
 
-While we encourage clients to reach out prior to sequencing so that we can collaborate to design the experiment to answer your specific questions, we look forward to hearing from you at any stage of your RNA-seq project. Please find our contact information available on our [website](https://www.cores.emory.edu/eicc/about/index.html)
+While we encourage clients to reach out prior to sequencing so that we can collaborate to design the experiment to answer your specific questions, we look forward to hearing from you at any stage of your RNA-seq project. Please find our contact information available on our [website](https://www.cores.emory.edu/eicc/about/index.html) and check out some of the graphs we've made for previous clients [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pptx).
 
 ### Session information and References {-}
 
