@@ -28,7 +28,7 @@ False Discovery Rate (FDR) tells you how likely it is that all genes identified 
 
 Our very first step is to load the qvalue package rom Bioconductor. Please see http://bioconductor.org/ for information about installation and use of Bioconductor and its packages.
 
-####Definition of terms
+#### Definition of terms
 
 ###### Quasi-likeliehood F Test:
 Unadjusted p values vs adjusted p values/(FDR): In DE analysis, a single p-value tells you how likely it is that a single gene is differentially expressed between at least two groups (ex: a control and a treatment group) due to some actual difference between the groups as opposed to random chance. False Discovery Rate (FDR) tells you how likely it is that all genes identified as DE are false positives. A FDR of 5% means that among all genes called DE, an average of 5% of those are truly not DE.DE genes are only considered significantly so if they meet the adjusted p value, not only the unadjusted p value.
@@ -42,14 +42,14 @@ require("pacman")
 p_load("readr", "here", "dplyr", "qvalue")
 
 files <- list(
-  pvalues = here("Miscellaneous/data/GH_pvals.txt")
+  pvalues = here("GitHub/Methods-1/RNASeqbulkMethods/data/GH_pvals.txt")
 )
 ```
 
 ### Loading p-values
 qvalue gives us a few options for calculating q-values but to keep our example simplified we import a table of p-values from a t-test conducted on RNA-seq count data.
 ```{r, message=FALSE}
-pvalues <- readr::read_tsv(files$pvalues)
+pvalues <- readr::read_csv(files$pvalues)
 pvalues <- pvalues$pvalue
 ```
 
@@ -61,7 +61,6 @@ and lower and lower values towards the right of the graph. If this assumption is
 your p-values look like a U shape, sine curve, or any other funky thing, this package will 
 provide you with faulty analysis if you do not do something to make that assumption hold. 
 Please contact EICC and depending on why your p-values are looking unusual we may be able to fix it for you.
-
 ```{r, message=FALSE}
 options(repr.plot.width=2.5, repr.plot.height=2.5)
 hist(pvalues, nclass=20)
