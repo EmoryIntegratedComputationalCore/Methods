@@ -22,7 +22,7 @@ Example data comes from the Global Patterns dataset is described in PNAS (Caporo
 
 Briefly, phyloseq takes in data from data processing programs like QIIME, mothur, and Pyrotagger. There are many other ways to import data into phyloseq. We typically import the .qza files produced by QIIME2 but in this walkthrough we will be using a built-in dataset that you can use anytime so you can follow along with this walkthrough if desired. For more examples to import data using other programs, see the phyloseq vignette [here](https://bioconductor.org/packages/release/bioc/vignettes/phyloseq/inst/doc/phyloseq-basics.html) 
 
-While QIIME2 offers richness estimates and other exploratory data analysis (ex: alpha and beta diversity metrices) we believe that phyloseq in combination with ggplot2 offers greater flexibility for generating customizable data visualizations. 
+While QIIME2 offers richness estimates and other exploratory data analysis (ex: alpha and beta diversity metrices) we believe that phyloseq in combination with ggplot2 offers greater flexibility for generating customizable data visualizations. To see a few examples of graphs we've generated using phyloseq, check out our data visualization menu [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf).
 
 Once exploratory data analysis in phyloseq is complete, we use the LDM package to perform statistical analyses. LDM takes in a table of operational taxonomic units (OTUs) or amplicon sequence variants (ASVs) along with a table of data about the samples (i.e. covariates) and uses a linear decomposition model to associate experimental conditions and covariates of interest with microbial abundance. Data about the samples typically includes sample names, some experimental condition of interest, and other variables as collected by the experimentors. LDM can accomodate both continuous and categorical data. 
 
@@ -77,7 +77,7 @@ sample_data(GP)$human<-ifelse(human==TRUE, "Human", "Not-Human")
 
 To compare richness estimates within samples we typically provide the Shannon metric but phyloseq also offers the Chao1, ACE, Simpson, or Inverse Simpson metrics. While this dataset does not include control samples we would suggest including Zymo controls, Positive Controls, and Negative Controls in your sequencing along with your experimenatl samples.
 
-Here we have also specified that we would like the Classic ggplot2 theme,which gives a white background with a rainbow of colors for each box plot. This color scheme is customizable and we would be happy to use one to fit your project. Please see our Data Visualization Menu linked [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pptx)
+Here we have also specified that we would like the Classic ggplot2 theme,which gives a white background with a rainbow of colors for each box plot. This color scheme is customizable and we would be happy to use one to fit your project. Please see our Data Visualization Menu linked [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf)
 
 ```{r alpha diversity, message=FALSE}
 alpha_meas = c("Shannon")
@@ -166,7 +166,7 @@ plot_bar(GP, x="human", fill="SampleType",
 
 Here we see that Cyanobacteria and Actinobacteria are most abundant in the non-human samples and the Bacteriodetes and Firmicutes are most abundant in the human samples. 
 
-There are many ways to visualize data in phyloseq, these are just a few examples of the typical products of our analytical pipeline at EICC. We would be happy to customize graphs according to your project-specific goals. Check out some additional exmaples from previous projects [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pptx)
+There are many ways to visualize data in phyloseq, these are just a few examples of the typical products of our analytical pipeline at EICC. We would be happy to customize graphs according to your project-specific goals. Check out some additional exmaples from previous projects [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf)
 
 ## Statistical Analysis with LDM {-}
 
