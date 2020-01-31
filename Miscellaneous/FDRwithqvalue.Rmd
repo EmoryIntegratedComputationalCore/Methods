@@ -42,14 +42,14 @@ require("pacman")
 p_load("readr", "here", "dplyr", "qvalue")
 
 files <- list(
-  pvalues = here("GitHub/Methods-1/RNASeqbulkMethods/data/GH_pvals.txt")
+  pvalues = here("Miscellaneous/data/GH_pvals.txt")
 )
 ```
 
 ### Loading p-values
 qvalue gives us a few options for calculating q-values but to keep our example simplified we import a table of p-values from a t-test conducted on RNA-seq count data.
 ```{r, message=FALSE}
-pvalues <- readr::read_csv(files$pvalues)
+pvalues <- readr::read_tsv(files$pvalues)
 pvalues <- pvalues$pvalue
 ```
 
@@ -61,6 +61,7 @@ and lower and lower values towards the right of the graph. If this assumption is
 your p-values look like a U shape, sine curve, or any other funky thing, this package will 
 provide you with faulty analysis if you do not do something to make that assumption hold. 
 Please contact EICC and depending on why your p-values are looking unusual we may be able to fix it for you.
+
 ```{r, message=FALSE}
 options(repr.plot.width=2.5, repr.plot.height=2.5)
 hist(pvalues, nclass=20)
