@@ -99,7 +99,7 @@ We start by transforming our data using the variance stabilizing transformation 
 
 vsd_dds <- vst(dds, blind=FALSE)
 
-(exp_pca <- plotPCA(vsd_dds, intgroup=c("condition")))
+plotPCA(vsd_dds, intgroup=c("condition"))
 
 ```
 
@@ -157,12 +157,12 @@ sel_padj <- order(res_df$padj, decreasing = FALSE)[1:20]
 #select vars of interest
 annotation <- as.data.frame(colData(dds)["condition"])
 
-(ht <- pheatmap(vsd_dds_df[sel_padj, ],
+pheatmap(vsd_dds_df[sel_padj, ],
                 cluster_rows=FALSE,
                 show_rownames = TRUE,
                 cluster_cols = FALSE,
                 annotation_col = annotation,
-                width = 1))
+                width = 1)
 
 ```
 
@@ -174,19 +174,20 @@ We also typically provide clients with an initial volcano plot created with the 
 A volcano plot is technically a scatter plot where the x-axis has the log2 transformed fold changes between the compared samples and the y axis has the local adjusted p-values for each gene, also called the q-value. Here we have also labelled the genes with FDR < 0.1 as that is where we set our threshold when we generated our results. The points in red are those which meet the threshold for statistical significance with a q value  less than or equal to 0.1 and a log2 fold change of 1.0 or greater. Points in green are those with only log2 fold changes >1.0 and those in blue have claques < 0.1. The points in grey are non statistically significant by any measure. All of these parameters can be adjusted based on your cutoffs and thresholds. 
 
 ```{r volcano, message = FALSE, echo = FALSE}
-(volc<- EnhancedVolcano(res,
-                        lab = rownames(res),
-                        x = "log2FoldChange",
-                        y = "padj",
-                        xlim = c(-6, 6),
-                        title= NULL,
-                        subtitle= "Log2 Fold Change vs q values",
-                        FCcutoff = 1.0,
-                        pLabellingCutoff = 0.1,
-                        pCutoff = 0.1,
-                        legendPosition = "bottom",
-                        legend=c("NS", "Log2 fold-change", "adj P-value",
-                                  "adj P-value & Log2 fold-change")))
+
+EnhancedVolcano(res,
+                lab = rownames(res),
+                x = "log2FoldChange",
+                y = "padj",
+                xlim = c(-6, 6),
+                title= NULL,
+                subtitle= "Log2 Fold Change vs q values",
+                FCcutoff = 1.0,
+                pLabellingCutoff = 0.1,
+                pCutoff = 0.1,
+                legendPosition = "bottom",
+                legend=c("NS", "Log2 fold-change", "adj P-value",
+                         "adj P-value & Log2 fold-change"))
 
 ```
 
