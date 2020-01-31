@@ -1,17 +1,15 @@
-
+---
+title: "False Discovery Rate (FDR) Estimation with qvalue"
+author: "EICC : Jessica Randall"
+output:
+  bookdown::pdf_document2:
+    fig_width: 5
+    latex_engine: xelatex
+    toc : false
+---
 ```{r logo, message = FALSE, echo=FALSE}
 knitr::include_graphics("eicc_logo.png")
 ```
-
----
-title: "False Discovery Rate (FDR) Estimation with qvalue"
-output:
-  bookdown::html_document2:
-    keep_md: yes
-    theme: "paper"
-    highlight: "default"
-    toc: yes
----
 
 The original paper from Storey and Tibshirani introducing the concepts implemented in this package is available [here](https://www.pnas.org/content/100/16/9440)
 
@@ -19,23 +17,23 @@ Briefly, [qvalue](http://github.com/jdstorey/qvalue) takes in p-values and adjus
 
 Multiple hypothesis testing is inherent to RNA-seq differential expression (DE) analysis and we will use this example to illustrate how we use qvalue to provide actionable results to our clients.
 
-Definition of terms
 Accurate interpretation of unadjusted p-values assumes that each gene is assessed for DE on its own. However, most RNA-seq experiments assess more than one gene at a time. In order to account for the number of genes we are testing, we must calculate and interpret the adjusted p-value for each gene.
 
 In DE analysis, a single p-value tells you how likely it is that a single gene is differentially expressed between at least two groups (ex: a control and a treatment group) due to some actual difference between the groups as opposed to random chance.
 
-False Discovery Rate (FDR) tells you how likely it is that all genes identified as DE are false positives. A FDR of 5% means that among all genes called DE, an average of 5% of those are truly not DE. The q-value is the significance threshold adjusted for the fact that we have assessed muliple genes.
+### Definition of terms {-}
 
-Our very first step is to load the qvalue package rom Bioconductor. Please see [Bioconductor](http://bioconductor.org/) for information about installation and use of Bioconductor and its packages.
+#### False Discovery Rate (FDR) {-} 
 
-### Definition of terms
+This tells you how likely it is that all genes identified as DE are false positives. A FDR of 5% means that among all genes called DE, an average of 5% of those are truly not DE. The q-value is the significance threshold adjusted for the fact that we have assessed muliple genes.
 
-##### Quasi-likeliehood F Test:
+##### Quasi-likeliehood F Test: {-}
 
 Unadjusted p values vs adjusted p values/(FDR): In DE analysis, a single p-value tells you how likely it is that a single gene is differentially expressed between at least two groups (ex: a control and a treatment group) due to some actual difference between the groups as opposed to random chance. False Discovery Rate (FDR) tells you how likely it is that all genes identified as DE are false positives. A FDR of 5% means that among all genes called DE, an average of 5% of those are truly not DE.DE genes are only considered significantly so if they meet the adjusted p value, not only the unadjusted p value.
 
+### Loading R packages {-}
 
-### Loading R packages 
+Our very first step is to load the qvalue package rom Bioconductor. Please see [Bioconductor](http://bioconductor.org/) for information about installation and use of Bioconductor and its packages.
 
 ```{r load packs, message=FALSE}
 require("pacman")
@@ -73,7 +71,7 @@ Please contact EICC and depending on why your p-values are looking unusual we ma
 ```{r histo, message=FALSE, echo = FALSE}
 
 ggplot(results, aes(pvalue)) + 
-  geom_histogram(show.legend = TRUE, na.rm = TRUE, binwidth = 0.05) +
+  geom_histogram(show.legend = TRUE, na.rm = TRUE, binwidth = 0.023) +
   theme_classic()
 
 ```
@@ -161,7 +159,6 @@ For a more specific application and interpretation of these or additional tools 
 ### Session information and References {-}
 
 ```{r sessioninfo, message = FALSE, echo = FALSE}
-(author <- "Jessica Randall")
 date()
 sessionInfo()
 citation("bookdown")
