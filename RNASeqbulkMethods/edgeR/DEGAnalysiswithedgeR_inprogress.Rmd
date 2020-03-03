@@ -49,9 +49,8 @@ Please reach out to EICC if you would like to compare 3 or more groups as this i
 ```{r load libs and data, message = FALSE, echo = FALSE}
 
 require ("pacman")
-p_load("readr", "dplyr", "knitr", "tidyverse", "edgeR", 
-       "ggplot2", "EnhancedVolcano", 
-      "org.Dm.eg.db", "AnnotationDbi")
+p_load("readr", "abind","dplyr", "knitr", "tidyr", "edgeR", 
+       "ggplot2", "EnhancedVolcano")
 
 theme_set(theme_minimal())
 
@@ -89,24 +88,18 @@ y2$samples$group <- relevel(y2$samples$group,
 
 ```
 
-### Annotating gene labels {-}
+### Design Matrix {-}
 
-Typically we receieve and provide results using genes labelled with gene symbols. However, occasionally someone will prefer Entrez or Ensemble IDs. This is an example of how we would annotate genes providede with Ensemble IDs with their corresponding gene symbols.
+The design matrix is a mathematical representation of our experimental design. This is the way the quasi-likelihood F test needs to see our experiment represented in order to perform the comparsions we would like.
 
-Annotation is done using the Annotation Dbi package and the annotation library specific to your organism, in this case, we use org.Dm.eg.db for Drosophila melongaster. This allows us to annotate genes with different labels regardless of the pacakge used for differential expression analysis. 
+Think of the first line like a simple linear equation: y= B0 + x * B1, y is our outcome of interest that we are expecting will vary based on the B0 and x * B1 terms. In our case y is gene expression ~ 0 is our intercept term B0 and this tells us how much additional variability we have in our experiment if being either a case or a control had no effect on gene expression. Group is our variable of interest x*B1. We would like to calculate how much being in one group or another affects the expression of each gene. The next two lines are renaming the column names of the design matrix to be the same as the levels in the samples, either "Control" or "Treatment" in our case and the row names to be the sam as the column names in the cpm which are the IDs of our samples.
 
-Please note that all IDs which no longer have official gene symbols will be removed from the analysis at this step. In some cases, IDs may map to many values in another labelling scheme and in this case we have selected to only keep the first label. 
+```{r design, message = FALSE, echo = FALSE}
 
-```{r annotate, message = FALSE, echo = FALSE}
+design <-model.matrix(~ 0 + group, data = y2$samples)
 
-y2$genes$Symbol <- mapIds(org.Dm.eg.db, 
-                         rownames(y2),
-                         keytype="ENSEMBL", 
-                         column="SYMBOL", 
-                         multiVals = "first")
-
-y2 <- y2[!is.na(y2$genes$Symbol), ]
-                         
+colnames(design) <- levels(y2$samples$group)
+rownames(design) <-colnames(y2$counts)
 ```
 
 If we had any additional data to add about the samples that we wanted to include in our analysis we would add it next but since this is a simplified example, we are only comparing treated and control samples without taking into account any additional information about them.
@@ -139,7 +132,7 @@ If you choose to use EICC and edgeR specifically to do your differential express
 
 ```{r, filter, message = FALSE, echo = FALSE}
 
-keep <- filterByExpr(y2)
+keep <- filterByExpr(y2, design)
 
 table(keep)
 
@@ -153,8 +146,6 @@ Since we've removed genes with low counts we need to recalculate the library siz
 
 y2 <- y2[keep, ,keep.lib.sizes=FALSE]
 
-dim(y2)
-
 ```
 
 ### Normalizing data {-}
@@ -167,17 +158,7 @@ As you can see from the graph below, the library sizes of the samples vary from 
 
 ```{r normal, message = FALSE, echo = FALSE}
 
-barplot(y2$samples$lib.size*1e-6, 
-        names=1:7, 
-        ylab="Library size (millions)", 
-        main="Library Size")
-
 y2 <- calcNormFactors(y2, method="TMM")
-
-barplot(y2$samples$lib.size*1e-6, 
-        names=1:7, 
-        ylab="Library size (millions)", 
-        main="Library Size")
 
 ```
 
@@ -189,18 +170,16 @@ First, we estimate the dispersion which is the amount of variance in our experim
 
 We then take the square root of the dispersion to give us the BCV. This check of the BCV serves as a measure of quality control for the analysis. Since our samples are from genetically similar samples, we would expect our BCV to be between 0.05-0.2.
 
-```{r, bcv, message = FALSE, echo = FALSE}
+```{r bcv, message = FALSE, echo = FALSE}
 
-y2 <- estimateDisp(y2,
-                   design, 
-                   robust=TRUE)
+y2 <- estimateDisp(y2, design, robust=TRUE)
 
 bcv <-sqrt(y2$common.dispersion)
 
 bcv
 ```
 
-Our biological variability is estimated to be 0.14 which makes sense for genetically similar individuals.
+Our biological variability is estimated to be 0.17 which makes sense for genetically similar individuals.
 
 ### Testing {-}
 
@@ -214,14 +193,13 @@ The decision to use edgeR will vary by your experimental goals. If you use edgeR
 
 comparison <- makeContrasts(treated-untreated, levels=design)
 
-qlfit <-glmQLFit(y2, 
-                 design, 
-                 robust=TRUE)
+qlfit <-glmQLFit(y2, design, robust=TRUE)
 
-qlf <- glmQLFTest(qlfit, 
-                  contrast=comparison)
+qlf <- glmQLFTest(qlfit, contrast = comparison)
 
-summary(decideTests(qlf, adjust.method="fdr", p.value=0.05)) 
+summary(decideTestsDGE(qlf, adjust.method="fdr", p.value=0.05)) 
+
+topTags(qlf)
 
 ```
 
@@ -229,7 +207,7 @@ summary(decideTests(qlf, adjust.method="fdr", p.value=0.05))
 
 In this example we see that while controlling the adjustedp/FDR threshold at <0.05, we have 695 (9.6%) DE genes. Of these, 358 (4.9%) are up regulated and 337 (4.7%) are down regulated while 7224 (91%) are not significantly differentially expressed.
 
-In our walkthorugh of DESEq2 we use the same example dataset and found that while controlling the adjustedp/FDR threshold at <0.1, we had 1,054 (10.6%) DE genes. Of these, 518 (5.2%) were up regulated and 536 (5.4%) were down regulated. There was 1 outlier gene (0.01%) detected and 1539 genes (16%) with low counts were removed for having counts <6 across all samples. Different analytical tools will often give you slightly different results and edgeR may be better for projects which have specified genes of interest in mind rather than exploratory projects since edgeR is much more strict with potential false positive results while DESeq2 may allow more false positives into your significant results but it provides you additional tools for evaluating their veracity before following up with a lab test.
+In our walkthorugh of DESEq2 we use the same example dataset and found that while controlling the adjustedp/FDR threshold at <0.1, we had 1,054 (10.6%) DE genes. Of these, 518 (5.2%) were up regulated and 536 (5.4%) were down regulated. Different analytical tools will often give you slightly different results and edgeR may be better for projects which have specified genes of interest in mind rather than exploratory projects since edgeR is much more strict with potential false positive results. While DESeq2 may allow more false positives into your significant results it also provides additional tools for evaluating their veracity before following up with a lab test.
 
 FDR thresholds can also range from 0.05-0.2 and it is much better to have the option to lower your threshold during analysis rather than have to increase it because your study was not sufficiently powered to find anything but the most extremely highly or lowly differentially expressed genes. Please reach out to us at EICC if you would like assistance in planning your experimental design for your RNAseq project and in setting appropriate FDR thresholds.
 
@@ -239,11 +217,11 @@ We now perform additional data visualizations. Typically we provide a PCA plot, 
 
 Before we generate our heatmap in edgeR, we need to transform the counts in the DGEList object y) into counts per million (CPM) and then log transform them. In this example we have decided to sort the DE genes by smallest adjusted p value and only examine the top 20 DE genes. The number of DE genes you may want to visualize is customizable based on your project with EICC.
 
-```{r visualize, echo= FALSE, fig.height=3, fig.width=3, message=FALSE}
+```{r visualize, echo= FALSE, message=FALSE}
 
 logCPM <- cpm(y2, prior.count=2, log=TRUE)
 
-rownames(logCPM) <- rownames(countdata)
+rownames(logCPM) <- rownames(y2$counts)
 
 colnames(logCPM) <- paste(y2$samples$group, sep="-")
 
@@ -256,26 +234,27 @@ coolmap(logCPM, margins=c(8,8))
 ```
 
 Please note that these are sorted for convenience but the gene at the top of the list is no more significant than the gene at the bottom of the list. As is the case with nominal p-values, a smaller adjusted p-value does not make a gene more statistically significant than one with a larger adjusted p-value. If the genes are below the threshold, they are all equally statistically significantly differential expressed. These are sorted for convenience but the gene at the top of the list is no more significant than the gene at the bottom of the list. 
-
 We also typically provide clients with an initial volcano plot created with the EnhancedVolcano R library. Similar to the PCA plot and heat map, this is a highly customizable graph and we would like to work with you to design graphs which best tell the story of your results. 
 
 A volcano plot is technically a scatter plot where the x-axis has the log2 transformed fold changes between the compared samples and the y axis has the local adjusted p-values for each gene, also called the q-value. Here we have also labelled the genes with FDR < 0.1 as that is where we set our threshold when we generated our results. The points in red are those which meet the threshold for statistical significance with a q value  less than or equal to 0.1 and a log2 fold change of 1.0 or greater. Points in green are those with only log2 fold changes >1.0 and those in blue have claques < 0.1. The points in grey are non statistically significant by any measure. All of these parameters can be adjusted based on your cutoffs and thresholds. 
 
 ```{r volcano, echo= FALSE, fig.height=5, fig.width=5, message=FALSE}
 
-EnhancedVolcano(y2,
-                lab = y2$genes$SYMBOL,
-                x = [log2 fold changes],
-                y = [adjusted p-vals],
-                xlim = c(-6, 6),
+volcano <- as.data.frame(topTags(qlf, n = 7919))
+
+EnhancedVolcano(volcano,
+                lab = row.names(volcano),
+                x = "logFC",
+                y = "FDR",
+                xlim = c(-5, 5),
                 title= NULL,
-                subtitle= "Log(2) Fold Change vs -log(10) q values",
-                FCcutoff = 1.0,
-                pLabellingCutoff = 0.05,
-                pCutoff = 0.05,
+                FCcutoff = 1.0, 
+                pCutoff = 10e-6,
+                pLabellingCutoff = 10e-6,
+                subtitle= "Log(2) Fold Change vs -log(10) FDR values",
                 legendPosition = "bottom",
-                legend=c("NS", "Log2 fold-change", "adj P-value",
-                         "adj P-value & Log2 fold-change"))
+                legend=c("NS", "Log2 fold-change", "FDR",
+                         "FDR & Log2 fold-change"))
 
 ```
 
@@ -290,7 +269,11 @@ date()
 sessionInfo()
 citation("bookdown")
 citation("readr")
+citation("abind")
+citation("tidyr")
+citation("dplyr")
 citation("knitr")
+citation("tidyr")
 citation("ggplot2")
 citation("edgeR")
 citation("EnhancedVolcano")
