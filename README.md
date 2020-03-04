@@ -9,7 +9,7 @@ A demonstraton of the R/Bioconductor package DEseq2 to perform differential expr
 ## baySeq (in progress)
 A demonstraton of the R/Bioconductor package baySeq to perform differential expression analysis from RNA-Seq count data. baySeq uses empirical Bayes methodology to estimate prior and posterior likelihoods of differential expression between comparison groups.
 
-## edgeR (in progress)
+## edgeR
 A demonstraton of the R/Bioconductor package edgeR to perform differential expression analysis from RNA-Seq count data. edgeR primarily uses the quasi-likelihood F test to determine differential expression between comparison groups.
 
 # Microbiome Methods
