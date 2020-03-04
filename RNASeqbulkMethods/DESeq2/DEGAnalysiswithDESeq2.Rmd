@@ -42,25 +42,30 @@ We're also going to specify that we'd like the row names of our sample data to c
 
 Please reach out to EICC if you would like to compare 3 or more groups as this is a simplified example. It may also be the case you will need more than 6 samples per experimental group or that you may need to remove genes with average counts greater than 5, 10, 15, or even 20 for sufficient statistical power. Please see our PROPER walk-through for an example of our of power and sample size analysis.
 
-```{r load libs and data, message = FALSE}
+```{r load libs and data, message = FALSE, echo = FALSE}
 require ("pacman")
-p_load("readr", "dplyr", "knitr", "DESeq2", "vsn", "ggplot2", "pheatmap", "EnhancedVolcano")
+p_load("readr", "dplyr", "knitr", 
+       "DESeq2", "vsn", "ggplot2", 
+       "pheatmap", "EnhancedVolcano")
+
 theme_set(theme_minimal())
 
-countdata <- as.matrix(read.csv(system.file("extdata", 
+countdata <- as.matrix(read.csv(system.file("extdata",
                                             "pasilla_gene_counts.tsv",
-                                            package="pasilla",mustWork=TRUE), sep = "\t", row.names = "gene_id"))
+                                            package="pasilla",mustWork=TRUE),
+                                sep = "\t", row.names = "gene_id"))
 
 sampledata <- as.data.frame(read.csv(system.file("extdata",
                                                  "pasilla_sample_annotation.csv",
-                                                 package="pasilla", mustWork=TRUE), row.names = 1))
+                                                 package="pasilla", mustWork=TRUE), 
+                                     row.names = 1))
 
 sampledata <- sampledata[,c("condition","type")]
 ```
 
 Our data is almost ready to analyze but first, DESeq2 requires that the row names of the sample data are the same as the column names of the count data. This is why we used the informal unit test below to check before proceeding with analysis. In order to do the matrix multiplication as part of the analysis, we need to have the samples in the counts file be labelled in the same way they are in the first column of the sample data file, typically this is where sample ids or abbreviated sample names are stored.
 
-```{r check sample names, echo = FALSE}
+```{r check sample names, message = FALSE}
 
 rownames(sampledata) <- sub("fb", "", rownames(sampledata))
 
@@ -94,7 +99,7 @@ We start by transforming our data using the variance stabilizing transformation 
 
 We can use the same plotPCA function to obtain the coordinates for each sample on the plot. This is helpful in identifying samples we would consider outliers since we haven't labelled each sample on the graph. 
 
-```{r exploratory pca, fig.height=5, fig.width=5}
+```{r exploratory pca, fig.height=5, fig.width=5, echo = FALSE}
 vst_dds <- vst(dds, blind=FALSE)
 
 pca_coords <- plotPCA(vst_dds, 
@@ -127,7 +132,7 @@ Next, we create our results with the results function, use the summary function 
 
 The summary gives you information about the total number of genes with non-zero read counts, the FDR specified above, the exact number and total percentage of the up and down regulated DE genes, the presence of any outliers, and the removal of any additional genes with low counts.
 
-``` {r test, message = FALSE}
+``` {r test, message = FALSE, echo = FALSE}
 
 dds <- DESeq(dds)
 
@@ -146,11 +151,11 @@ In our walkthorugh of edgeR we use the same example dataset and found that while
 
 Different analytical tools will often give you slightly different results and edgeR may be better for projects which have specified genes of interest in mind rather than exploratory projects since edgeR is much more strict with potential false positive results. While DESeq2 may allow more false positives into your significant results it also provides additional tools for evaluating their veracity before following up with a lab test.
 
-As part of our results output from DESeq2 we also provide the s-values. S-values provide an additional estimate of uncertainty by acting as a likelihood of whether the genes identified as differentially expressed are false positives. This helps our clients figure out if the DE genes they are seeing are worth confirming biologically. An s-value can be interpreted as s(genexyz)*100 = genexyz is x% likely to be a false positive finding. Here we obtain the s-values by performing log fold change (LFC) shrinkage on the dds object while specifying our comparison of interest and setting the s-values argument to TRUE. Briefly, LFC shrinkage makes the differences in the genes between groups comparable. Since genes can have a very small p-value even when the LFC is very small, this scales all of the LFCs by their p-values while preserving those truly large LFCs. We also use the apeglm estimator since it is the best available as of writing this and allows us to compute s-values. This is a much more complicated aspect of the analysis than we will cover here and for more detail on LFC shrinkage and s-values, please see the DESeq2 documentation here https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html
+As part of our results output from DESeq2 we also provide the s-values. S-values provide an additional estimate of uncertainty by acting as a likelihood of whether the genes identified as differentially expressed are false positives. This helps our clients figure out if the DE genes they are seeing are worth confirming biologically. An s-value can be interpreted as s(genexyz)*100 = genexyz is x% likely to be a false positive finding. Here we obtain the s-values by performing log fold change (LFC) shrinkage on the dds object while specifying our comparison of interest and setting the s-values argument to TRUE. Briefly, LFC shrinkage makes the differences in the genes between groups comparable. Since genes can have a very small p-value even when the LFC is very small, this scales all of the LFCs by their p-values while preserving those truly large LFCs. We also use the apeglm estimator since it is the best available as of writing this and allows us to compute s-values. This is a much more complicated aspect of the analysis than we will cover here and for more detail on LFC shrinkage and s-values, please see the DESeq2 documentation [here](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html).
 
-We check that the data frame was created successfully by using the informal unit test of dimension with the expected number of rows and columns and telling the program to stop if the file does not have these dimensions. After this runs successful we would typically export them as a .csv file for you.
+We check that the data frame was created successfully by using the informal unit test of dimension with the expected number of rows and columns and telling the program to stop if the file does not have these dimensions. After this runs successfully we would typically export them as a .csv file for you.
 
-``` {r results, message = FALSE}
+``` {r results, message = FALSE, echo = FALSE}
 
 LFC_dds <-as.data.frame(lfcShrink(dds, 
                                   coef="condition_treated_vs_untreated", 
@@ -173,7 +178,7 @@ We now perform additional data visualizations. Typically we provide a PCA plot, 
 
 For our heat maps, we typically show the mean normalized counts of the samples. Next, we put the samples in the order of treated to untreated and select only the 20 genes with the lowest adjusted p-values be displayed so that we can see the gene names. It is possible to keep all DE genes on a heat map but after 20 it becomes nearly impossible to read each of the individual gene name and depending on the number of DE genes, it can be difficult to see the differences between groups with 100-200 genes on a plot setup this way. The first graph shows 20 genes and the second graph shows 200 genes. 
 
-```{r visualize, echo= FALSE, fig.height=3, fig.width=3, message=FALSE}
+```{r visualize, echo= FALSE, fig.height=3.5, fig.width=3.5, message=FALSE}
 vst_df <- as.data.frame(assays(vst_dds))
 
 vst_df <- vst_df[c("treated1", "treated2", "treated3",
