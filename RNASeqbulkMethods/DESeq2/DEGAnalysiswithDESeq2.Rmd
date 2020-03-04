@@ -28,7 +28,7 @@ Compared to edgeR it has been our experience that DESeq2 is more liberal in its 
 
 #### Unadjusted p values vs adjusted p-values/(FDR): {-} 
 
-In DE analysis, a single p-value tells you how likely it is that a single gene is differential expressed between at least two groups (ex: a control and a treatment group) due to some actual difference between the groups as opposed to random chance. False Discovery Rate (FDR) tells you how likely it is that all genes identified as DE are false positives. A FDR of 5% means that among all genes called DE, an average of 5% of those are truly not DE. DE genes are only considered significantly so if they meet the adjusted p value, not only the unadjusted p-value. FDRs for each individual gene are called q-values or local FDRs. 
+In DE analysis, a single p-value tells you how likely it is that a single gene is differentially expressed between at least two groups (ex: a control and a treatment group) due to some actual difference between the groups as opposed to random chance. False Discovery Rate (FDR) tells you how likely it is that all genes identified as DE are false positives. A FDR of 5% means that among all genes called DE, an average of 5% of those are truly not DE. DE genes are only considered significantly so if they meet the adjusted p value, not only the unadjusted p-value. FDRs for each individual gene are called q-values or local FDRs. 
 
 ### Loading data {-}
 
@@ -79,7 +79,7 @@ Now that we know this is true, we can proceed.
 
 ### Preparing for Analysis {-}
 
-In order to preform a differential expression analysis, we need to specify some information about our data. In DESeq2 we must create a special object called a DESeqdataset object, here abbreviated as dds. This object takes in the count data, the sample data, and the variable we would like to compare between the samples as inputs.
+In order to preform a differentially expression analysis, we need to specify some information about our data. In DESeq2 we must create a special object called a DESeqdataset object, here abbreviated as dds. This object takes in the count data, the sample data, and the variable we would like to compare between the samples as inputs.
 
 Next, we specify that the untreated group is our reference group to which we would like to compare our treated samples.
 
@@ -145,9 +145,9 @@ summary(res)
 ```
 ### Results {-}
 
-In this example we see that while controlling the adjustedp/FDR threshold at <0.05, we have 838 DE genes betwen these groups, 406 are more expressed in the treated samples or up-regulated and 432 are more expressed in the untreated samples or down-regulated. Up and down regulation refers to the group you have set as the control or reference group. In this case, we are comparing the treated samples to the untreated samples so the untreated samples are our reference group and we say genes are up or down regulated in comparison to this group.
+In this example we see that while controlling the adjusted p/FDR threshold at <0.05, we have 838 DE genes between these groups, 406 are more expressed in the treated samples or up-regulated and 432 are more expressed in the untreated samples or down-regulated. Up and down regulation refers to the group you have set as the control or reference group. In this case, we are comparing the treated samples to the untreated samples so the untreated samples are our reference group and we say genes are up or down regulated in comparison to this group.
 
-In our walkthorugh of edgeR we use the same example dataset and found that while controlling the adjustedp/FDR threshold at <0.05, we found no differentailly expressed genes between these groups. 
+In our walkthorugh of edgeR we use the same example dataset and found that while controlling the adjusted p/FDR threshold at <0.05, we found no differentially expressed genes between these groups. 
 
 Different analytical tools will often give you slightly different results and edgeR may be better for projects which have specified genes of interest in mind rather than exploratory projects since edgeR is much more strict with potential false positive results. While DESeq2 may allow more false positives into your significant results it also provides additional tools for evaluating their veracity before following up with a lab test.
 
@@ -208,7 +208,7 @@ pheatmap(vst_df[sel_padj200, ],
 
 ```
 
-Here we see the differences in mean-normalized counts between the samples in the treated vs untreated groups in the genes sorted by smallest adjusted p-value. Please note that these are sorted for convenience but the gene at the top of the list is no more significant than the gene at the bottom of the list. As is the case with nominal p-values, a smaller adjusted p-value does not make a gene more statistically significant than one with a larger adjusted p-value. If the genes are below the threshold, they are all equally statistically significantly differential expressed. These are sorted for convenience but the gene at the top of the list is no more significant than the gene at the bottom of the list. 
+Here we see the differences in mean-normalized counts between the samples in the treated vs untreated groups in the genes sorted by smallest adjusted p-value. Please note that these are sorted for convenience but the gene at the top of the list is no more significant than the gene at the bottom of the list. As is the case with nominal p-values, a smaller adjusted p-value does not make a gene more statistically significant than one with a larger adjusted p-value. If the genes are below the threshold, they are all equally statistically significantly differentially expressed. These are sorted for convenience but the gene at the top of the list is no more significant than the gene at the bottom of the list. 
 
 We also typically provide clients with an initial volcano plot created with the EnhancedVolcano R library. Similar to the PCA plot and heat map, this is a highly customizable graph and we would like to work with you to design graphs which best tell the story of your results. 
 

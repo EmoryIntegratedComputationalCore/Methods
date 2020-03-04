@@ -16,15 +16,15 @@ Briefly, edgeR uses a negative binomial distribution to determine the likelihood
 
 Linked is the [original 2010 paper](https://www.ncbi.nlm.nih.gov/pubmed/19910308) from Robinson, McCarthy, and Smyth introducing the concepts implemented in edgeR. 
 
-There are two additional papers exploring improved functionality. One from McCathy, Chen, and Smyth in 2012 on accouting for [biological variation](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3378882/) and one from Chen, Lun, and Smyth in 2016 on establishing an [example workflow](https://www.ncbi.nlm.nih.gov/pubmed/27508061) for package functions 
+There are two additional papers exploring improved functionality. One from McCarthy, Chen, and Smyth in 2012 on accounting for [biological variation](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3378882/) and one from Chen, Lun, and Smyth in 2016 on establishing an [example workflow](https://www.ncbi.nlm.nih.gov/pubmed/27508061) for package functions 
 
 We will be using the [pasilla package](https://www.bioconductor.org/packages/release/data/experiment/html/pasilla.html) for our example data.
 
-edgeR has wide range of applications to genomic analyses. Our simplified example describes the quasi-likeliehood F-test which is the method in edgeR which provides the strictest control of potential false positive genes. We strongly encourage you to reach out to EICC with questions regarding options available to you with edgeR. Check out some of the graphs from previous projects [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf).
+edgeR has wide range of applications to genomic analyses. Our simplified example describes the quasi-likelihood F-test which is the method in edgeR which provides the strictest control of potential false positive genes. We strongly encourage you to reach out to EICC with questions regarding options available to you with edgeR. Check out some of the graphs from previous projects [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf).
 
 ### Definition of terms {-}
 
-#### Quasi-likeliehood F Test: {-}
+#### Quasi-likelihood F Test: {-}
 
 Unadjusted p values vs adjusted p values/(FDR): In DE analysis, a single p-value tells you how likely it is that a single gene is differentially expressed between at least two groups (ex: a control and a treatment group) due to some actual difference between the groups as opposed to random chance. False Discovery Rate (FDR) tells you how likely it is that all genes identified as DE are false positives. A FDR of 5% means that among all genes called DE, an average of 5% of those are truly not DE.DE genes are only considered significantly so if they meet the adjusted p value, not only the unadjusted p value. 
 
@@ -72,7 +72,7 @@ In order to preform a pairwise comparison we need to specify some information ab
 
 This object takes in the countdata object and the sample data comparison variable of interest as a vector to create the DGEList object and prepare for analysis. 
 
-Since we want to know if edgeR filters out any additional genes with low counts, we create another object called y2 to perform additonal filtering. We save the unfiltered DGElist object as y so we can check how many genes we are starting with and how many are filtered for low counts later on. 
+Since we want to know if edgeR filters out any additional genes with low counts, we create another object called y2 to perform additional filtering. We save the unfiltered DGElist object as y so we can check how many genes we are starting with and how many are filtered for low counts later on. 
 
 Since edgeR looks at data alphabetically, we also need to make sure we specify the untreated group is our reference group with the ref="untreated" statement.
 
@@ -90,9 +90,9 @@ y2$samples$group <- relevel(y2$samples$group,
 
 ### Design Matrix {-}
 
-The design matrix is a mathematical representation of our experimental design. This is the way the quasi-likelihood F test needs to see our experiment represented in order to perform the comparsions we would like.
+The design matrix is a mathematical representation of our experimental design. This is the way the quasi-likelihood F test needs to see our experiment represented in order to perform the comparisons we would like.
 
-Think of the first line like a simple linear equation: y= B0 + x * B1, y is our outcome of interest that we are expecting will vary based on the B0 and x * B1 terms. In our case y is gene expression ~ 0 is our intercept term B0 and this tells us how much additional variability we have in our experiment if being either a case or a control had no effect on gene expression. Group is our variable of interest x*B1. We would like to calculate how much being in one group or another affects the expression of each gene. The next two lines are renaming the column names of the design matrix to be the same as the levels in the samples, either "Control" or "Treatment" in our case and the row names to be the sam as the column names in the cpm which are the IDs of our samples.
+Think of the first line like a simple linear equation: y= B0 + x * B1, y is our outcome of interest that we are expecting will vary based on the B0 and x * B1 terms. In our case y is gene expression ~ 0 is our intercept term B0 and this tells us how much additional variability we have in our experiment if being either a case or a control had no effect on gene expression. Group is our variable of interest x*B1. We would like to calculate how much being in one group or another affects the expression of each gene. The next two lines are renaming the column names of the design matrix to be the same as the levels in the samples, either "Control" or "Treatment" in our case and the row names to be the same as the column names in the cpm which are the IDs of our samples.
 
 ```{r design, message = FALSE}
 
@@ -162,7 +162,7 @@ y2 <- calcNormFactors(y2, method="TMM")
 
 ### Estimating biological variability between samples {-}
 
-In DE analysis we are testing the idea that gene expression varies between these groups, control and treatment, and we expect that most of the variation between the samples comes from them being either a control sample or a treatment sample. However, there will always be a certain amount of variability we cannot anticipate but that we can measure. This inherent biological varaibility, also called the biological coefficient of variation or BCV, also varies by the type of sample. In well controlled experiments technical replicates would have smaller BCVs than unrelated, unique individuals.
+In DE analysis we are testing the idea that gene expression varies between these groups, control and treatment, and we expect that most of the variation between the samples comes from them being either a control sample or a treatment sample. However, there will always be a certain amount of variability we cannot anticipate but that we can measure. This inherent biological variability, also called the biological coefficient of variation or BCV, also varies by the type of sample. In well controlled experiments technical replicates would have smaller BCVs than unrelated, unique individuals.
 
 First, we estimate the dispersion which is the amount of variance in our experiment. This is critical to the analysis because we want genes that appear to be consistently high or low across samples to count more in analysis than genes that vary (which signals possible outlier genes) count less. We have specified that robust=TRUE that we may account for any outlier genes. If there are none, this does not affect estimation. 
 
@@ -181,11 +181,11 @@ Our biological variability is estimated to be 0.17 which makes sense for genetic
 
 ### Testing {-}
 
-At this point we have prepared all of the data to be input into our quasi- likelihood F (QLF) test. Recall that the hypothesis we are testing is that there is no difference in gene expression between the treatment and control samples. We chose to use the QLF test because of all of the tests edgeR offers, it is the most up to date as of writing this and gives us the strongest control of false postive results. In this step we specify our comparison of interests, treated to untreated, we fit the QLF model, test it, and summarize our results.
+At this point we have prepared all of the data to be input into our quasi- likelihood F (QLF) test. Recall that the hypothesis we are testing is that there is no difference in gene expression between the treatment and control samples. We chose to use the QLF test because of all of the tests edgeR offers, it is the most up to date as of writing this and gives us the strongest control of false positive results. In this step we specify our comparison of interests, treated to untreated, we fit the QLF model, test it, and summarize our results.
 
 Since in our example we have an idea of what we're expecting to find in terms of the number of DE genes, we want to be sure we have as few false positive DE genes as possible so that we know whichever we do see, we can confidently follow up on with a lab test. 
 
-The decision to use edgeR will vary by your experimental goals. If you use edgeR, the QLF test is always the recommended test because even if you are doing a simple pairwise comparsion now, you can add in additional variables like sex, ethnicity, or batch with relative ease as compared to the other tests available. Please contact EICC if you would like to discuss your experimental goals so we can assist you in choosing the appropriate analysis tool.
+The decision to use edgeR will vary by your experimental goals. If you use edgeR, the QLF test is always the recommended test because even if you are doing a simple pairwise comparison now, you can add in additional variables like sex, ethnicity, or batch with relative ease as compared to the other tests available. Please contact EICC if you would like to discuss your experimental goals so we can assist you in choosing the appropriate analysis tool.
 
 ``` {r test, message = FALSE, echo = FALSE}
 
@@ -201,9 +201,9 @@ summary(decideTestsDGE(qlf, adjust.method="fdr", p.value=0.05))
 
 ### Results {-}
 
-In this example we see that while controlling the adjustedp/FDR threshold at <0.05, we have no DE genes betwen these groups.
+In this example we see that while controlling the adjusted p/FDR threshold at <0.05, we have no DE genes between these groups.
 
-In our walkthorugh of DESEq2 we use the same example dataset and found that while controlling the adjustedp/FDR threshold at <0.05, we have 838 DE genes betwen these groups, 406 are more expressed in the treated samples or up-regulated and 432 are more expressed in the untreated samples or down-regulated. Up and down regulation refers to the group you have set as the control or reference group. In this case, we are comparing the treated samples to the untreated samples so the untreated samples are our reference group and we say genes are up or down regulated in comparison to this group. 
+In our walkthorugh of DESeq2 we use the same example dataset and found that while controlling the adjusted p/FDR threshold at <0.05, we have 838 DE genes between these groups, 406 are more expressed in the treated samples or up-regulated and 432 are more expressed in the untreated samples or down-regulated. Up and down regulation refers to the group you have set as the control or reference group. In this case, we are comparing the treated samples to the untreated samples so the untreated samples are our reference group and we say genes are up or down regulated in comparison to this group. 
 
 Different analytical tools will often give you slightly different results and edgeR may be better for projects which have specified genes of interest in mind rather than exploratory projects since edgeR is much more strict with potential false positive results. While DESeq2 may allow more false positives into your significant results it also provides additional tools for evaluating their veracity before following up with a lab test.
 
