@@ -42,7 +42,7 @@ We're also going to specify that we'd like the row names of our sample data to c
 
 Please reach out to EICC if you would like to compare 3 or more groups as this is a simplified example. It may also be the case you will need more than 6 samples per experimental group or that you may need to remove genes with average counts greater than 5, 10, 15, or even 20 for sufficient statistical power. Please see our PROPER walk-through for an example of our of power and sample size analysis.
 
-```{r load libs and data, message = FALSE, echo = FALSE}
+```{r load libs and data, message = FALSE}
 require ("pacman")
 p_load("readr", "dplyr", "knitr", "DESeq2", "vsn", "ggplot2", "pheatmap", "EnhancedVolcano")
 theme_set(theme_minimal())
@@ -60,7 +60,7 @@ sampledata <- sampledata[,c("condition","type")]
 
 Our data is almost ready to analyze but first, DESeq2 requires that the row names of the sample data are the same as the column names of the count data. This is why we used the informal unit test below to check before proceeding with analysis. In order to do the matrix multiplication as part of the analysis, we need to have the samples in the counts file be labelled in the same way they are in the first column of the sample data file, typically this is where sample ids or abbreviated sample names are stored.
 
-```{r check sample names, echo = FALSE, message=FALSE}
+```{r check sample names, echo = FALSE}
 
 rownames(sampledata) <- sub("fb", "", rownames(sampledata))
 
@@ -78,7 +78,7 @@ In order to preform a differential expression analysis, we need to specify some 
 
 Next, we specify that the untreated group is our reference group to which we would like to compare our treated samples.
 
-``` {r create dds object, message = FALSE, echo = FALSE}
+``` {r create dds object, message = FALSE}
 dds <- DESeqDataSetFromMatrix(countData = countdata,
                               colData = sampledata,
                               design = ~ condition)
