@@ -9,7 +9,7 @@ output:
 ---
 
 ```{r logo, message = FALSE, echo=FALSE}
-knitr::include_graphics("eicc_logo.png")
+#knitr::include_graphics("input/eicc_logo.png")
 ```
 
 Briefly, DESeq2 uses a Wald test to determine differential gene expression between at least two groups. DESeq2 assumes a negative binomial model which mathematically accounts for the fact that we are assessing gene counts and we are assuming that most genes we are comparing between the groups will not be differential expressed.
@@ -46,7 +46,7 @@ Please reach out to EICC if you would like to compare 3 or more groups as this i
 require ("pacman")
 p_load("readr", "dplyr", "knitr", 
        "DESeq2", "vsn", "ggplot2", 
-       "pheatmap", "EnhancedVolcano")
+       "pheatmap", "EnhancedVolcano", "apeglm", "tinytex")
 
 theme_set(theme_minimal())
 
