@@ -14,14 +14,13 @@ HERE := $(shell Rscript --vanilla -e 'write(here::here(), stdout())')
 
 all:	output/DEGAnalysiswithbayseq_underconstruction.pdf
 
-clean:	
-		
-	rm output/*
+clean:
+					-rm -r output/*
 	
 	
 output/DEGAnalysiswithbayseq_underconstruction.pdf: \
 					src/DEGAnalysiswithbayseq_underconstruction.Rmd
 			-rm src/DEGAnalysiswithbayseq_underconstruction.pdf
 			Rscript --vanilla -e "rmarkdown::render('$<')"
-			mv src/DEGAnalysiswithbayseq_underconstruction.pdf 
+			mv src/DEGAnalysiswithbayseq_underconstruction.pdf $@ 
 # done.
