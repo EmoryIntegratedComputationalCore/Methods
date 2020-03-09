@@ -8,8 +8,9 @@ output:
     toc : false
 ---
 
-```{r logo, message = FALSE, echo=FALSE}
-knitr::include_graphics("eicc_logo.png")
+```{r logo, message = FALSE, echo = FALSE}
+#require("knitr")
+#knitr::include_graphics("Emory/EICC/Methods/RNASeqbulkMethods/bayseq/input/eicc_logo.png")
 ```
 
 Briefly, baySeq uses empirical Bayesian inference to determine the likelihood that genes in compared samples are indeed DE genes. baySeq improve seeks to improve accuracy in DE estimation over other popular packages by using the underlying structure of the data itself. baySeq does show improved performance in the case of more complex study designs (i.e. multiple group comparisons) and in studies with large numbers of libraries compared to other popular packages. Here we illustrate a simplified example of a comparison between a control and a treatment group.
@@ -57,8 +58,9 @@ Please reach out to EICC if you would like to compare 3 or more groups as this i
 
 require ("pacman")
 
-p_load("readr", "dplyr", "knitr", "tidyr", "baySeq",
-       "DESeq2", "vsn", "ggplot2", "EnhancedVolcano", "pheatmap")
+p_load("rmarkdown","readr","here", "dplyr", "knitr", "tidyr", "baySeq",
+       "DESeq2", "vsn", "ggplot2", "EnhancedVolcano", "pheatmap", "random")
+set.seed(seed= 22310)
 
 theme_set(theme_minimal())
 
@@ -82,7 +84,7 @@ The groups object specifies our hypothesis. In the null hypothesis of no differe
 
 We also annotate all 13064 genes with a number to cross-reference with the list of gene names and counts after analysis. Our final preparation step is to get our library size. Sometimes you may already know this but we have inferred it from the data.
 
-``` {r create CD object, message = FALSE}
+```{r create CD object, message = FALSE}
 
 groups<- list(NDE = c("untreated","untreated","untreated","untreated","untreated","untreated","untreated"),
               DE = c("untreated","untreated","untreated","untreated","treated", "treated", "treated"))
@@ -176,18 +178,21 @@ results_df <- as.data.frame(topCounts(CD, group="DE", normaliseData=TRUE, FDR=0.
   arrange(FDR.DE)
 
 row.names(results_df) <- results_df$name
-stopifnot(nrow(results_df) == 288 & ncol(results_df) == 12)
+stopifnot(nrow(results_df) == 250 & ncol(results_df) == 12)
 ```
 
 ### Visualizing {-}
 
 We now perform additional data visualizations. Typically we provide a PCA plot, heat maps, and volcano plots. We would be happy to work with you to customize these for publication. Please see our Data Visualization [menu](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf) for more options and examples from previous projects.
 
-Before we generate our heatmap in baySeq, we need to transform the counts in the DGEList object y) into counts per million (CPM) and then log transform them. In this example we have decided to sort the DE genes by smallest adjusted p value and only examine the top 20 DE genes. The number of DE genes you may want to visualize is customizable based on your project with EICC.
+Before we generate our heatmap in baySeq, we need to transform the count. In this example we have decided to sort the DE genes by smallest adjusted p value and only examine the top 20 DE genes. The number of DE genes you may want to visualize is customizable based on your project with EICC.
 
 ```{r visualize, echo=FALSE, fig.height=4, fig.width=4, message=FALSE}
 
 vst_df <- as.data.frame(assays(vst_dds))
+
+vst_df <- vst_df[c("treated1fb", "treated2fb", "treated3fb",
+                   "untreated1fb", "untreated2fb", "untreated3fb", "untreated4fb")]
 
 res_heat <- as.data.frame(results_df)
 
@@ -203,7 +208,7 @@ pheatmap(vst_df[sel_padj20, ],
          annotation_col = annotation,
          width = 1)
 
-sel_padj200 <- order(res_heat$padj, decreasing = FALSE)[1:200]
+sel_padj200 <- order(res_heat$FDR.DE, decreasing = FALSE)[1:200]
 
 pheatmap(vst_df[sel_padj200, ],
          cluster_rows= TRUE,
@@ -215,28 +220,35 @@ pheatmap(vst_df[sel_padj200, ],
 ```
 
 Please note that these are sorted for convenience but the gene at the top of the list is no more significant than the gene at the bottom of the list. As is the case with nominal p-values, a smaller adjusted p-value does not make a gene more statistically significant than one with a larger adjusted p-value. If the genes are below the threshold, they are all equally statistically significantly differential expressed. These are sorted for convenience but the gene at the top of the list is no more significant than the gene at the bottom of the list. 
-We also typically provide clients with an initial volcano plot created with the EnhancedVolcano R library. Similar to the PCA plot and heat map, this is a highly customizable graph and we would like to work with you to design graphs which best tell the story of your results. 
+
+When using edgeR, DESeq2, or other frequentist based packages, we also typically provide clients with an initial volcano plot of the log(2) fold changes by the adjusted p-values created with the EnhancedVolcano R library. Similar to the PCA plot and heat map, this is a highly customizable graph and we would like to work with you to design graphs which best tell the story of your results. 
+
+However, with bayseq since we have posterior likeliehoods instead of log(2) fold changes, we use the built-in plotPosteriors function in bayseq to examine the distribution of the posteriori likeliehoods against the log-ratio values 
 
 A volcano plot is technically a scatter plot where the x-axis has the log2 transformed fold changes between the compared samples and the y axis has the local adjusted p-values for each gene, also called the q-value. Here we have also labelled the genes with FDR < 0.1 as that is where we set our threshold when we generated our results. The points in red are those which meet the threshold for statistical significance with a q value  less than or equal to 0.1 and a log2 fold change of 1.0 or greater. Points in green are those with only log2 fold changes >1.0 and those in blue have claques < 0.1. The points in grey are non statistically significant by any measure. All of these parameters can be adjusted based on your cutoffs and thresholds. 
 
-```{r volcano, echo= FALSE, fig.height=5, fig.width=5, message=FALSE}
+```{r plotma, echo= FALSE, fig.height=5, fig.width=5, message=FALSE}
 
-volcano <- as.data.frame(topTags(qlf, n = 7919))
+plotMA.CD(CD, 
+          samplesA = 1:4, samplesB = 5:7, 
+          col = c(rep("orange", 100), rep("darkblue", 900)),
+          xlab= "Mean Normalized counts",
+          ylab = "Log ratio of Posterior Likelihoods"
+          )
 
-EnhancedVolcano(volcano,
-                lab = row.names(volcano),
-                x = "logFC",
-                y = "FDR",
-                xlim = c(-5, 5),
+EnhancedVolcano(res,
+                lab = rownames(res),
+                x = "log2FoldChange",
+                y = "padj",
+                xlim = c(-6, 6),
                 title= NULL,
-                FCcutoff = 1.0, 
-                pCutoff = 0.05,
+                subtitle= "Log(2) Fold Change vs -log(10) q values",
+                FCcutoff = 1.0,
                 pLabellingCutoff = 0.05,
-                subtitle= "Log(2) Fold Change vs -log(10) FDR values",
+                pCutoff = 0.05,
                 legendPosition = "bottom",
-                legend=c("NS", "Log2 fold-change", "FDR",
-                         "FDR & Log2 fold-change"))
-
+                legend=c("NS", "Log2 fold-change", "adj P-value",
+                         "adj P-value & Log2 fold-change"))
 ```
 
 There are many more functions and many more specifications to functions than are used here in order to show a simplified example of one of the tools we use for differential expression analysis. Obtaining specific, actionable, and publication quality results from analysis requires a deeper understanding of your specific data set and we would love the opportunity to discuss these options with you.
