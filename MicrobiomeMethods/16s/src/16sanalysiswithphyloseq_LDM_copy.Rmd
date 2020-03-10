@@ -1,6 +1,6 @@
 ---
 title: 'Microbiome Analysis (16s) with phyloseq and LDM"'
-author: "Jessica Randall"
+author: "EICC : Jessica Randall"
 output:
   bookdown::pdf_document2:
     fig_width: 5
@@ -33,7 +33,7 @@ We will be using the Global Patterns dataset for this walk through but typically
 ```{r load packages, message=FALSE}
 
 pacman::p_load("devtools","phyloseq","tidyverse","qiime2R", "ggplot2", 
-              "reshape2", "GUniFrac", "vegan", "LDM", "ggfortify", "assertr", "janitor")
+              "reshape2", "GUniFrac", "vegan", "LDM", "janitor", "ggfortify")
 
 data ("GlobalPatterns")
 
@@ -45,6 +45,8 @@ In order to improve statistical power to detect differentially abundant taxa we 
 
 With this dataset we would also like to define a categorical variable for sample type which will tell us if the sample is from a human or not since this is a covariate of interest to us and we expect it to account for a large percentage of the variability between the samples. This variable will be project specific.
 
+We also need to recover the data from the phyloseq object and transform the taxa table, asvs, and the metadata objects from phyloseq data objects to data frames for later statistical analyses.
+
 ```{r load data, echo = FALSE, message=FALSE}
 
 GP <- prune_taxa(taxa_sums(GlobalPatterns) > 0, GlobalPatterns)
@@ -53,7 +55,17 @@ human <- get_variable(GP, "SampleType") %in% c("Feces", "Mock", "Skin", "Tongue"
 
 sample_data(GP)$human <- factor(human)
 
-sample_data(GP)$human<-ifelse(human == TRUE, "Human", "Not-Human")
+sample_data(GP)$human<-ifelse(human==TRUE, "Human", "Not-Human")
+
+taxatable <- as.data.frame(tax_table(GP))
+
+phytree <- phy_tree(GP)
+
+metadata <- as.data.frame(sample_data(GP)) %>%
+  clean_names() %>%
+  mutate(type = as.character(sample_type))
+
+asvs <- as.data.frame(otu_table(GP))
 
 ```
 
@@ -67,12 +79,15 @@ To compare richness estimates within samples we typically provide the Shannon me
 
 Here we have also specified that we would like the Classic ggplot2 theme,which gives a white background with a rainbow of colors for each box plot. This color scheme is customizable and we would be happy to use one to fit your project. Please see our Data Visualization Menu linked [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf)
 
-```{r alphadiv, message = FALSE, echo = FALSE}
+```{r alpha diversity, message=FALSE}
+alpha_meas = c("Shannon")
 
-(alphadivplot <- plot_richness(GP, "SampleType", measures = c("Shannon")) + 
-  geom_boxplot(aes(SampleType, value, fill = SampleType), size = 0.5, alpha = 0.6) + 
+plotGP <- plot_richness(GP, "SampleType", measures=alpha_meas)
+
+(alphadivplot <- plot_richness(GP, "SampleType", measures=alpha_meas) + 
+  geom_boxplot(aes(SampleType, value, fill= SampleType), size=0.5, alpha=0.6) + 
   geom_jitter(width = 0.25) +
-  theme_minimal() +
+  theme_classic() +
   theme(axis.text.x = element_text(angle = 90)))
 
 ```
@@ -94,8 +109,11 @@ There are many metrics for assessing beta diversity and phyloseq includes option
 
 The amount of variability we would expect to see between sample types will vary based on your specific project. In general we do expect that control samples will be very different in their microbial composition than the experimental samples.
 
-```{r betadiv, message = FALSE, echo = FALSE}
+In order to see which CAs are contributing the most variability to the relationship between sampletype and microbiome composition, we first exmaine a Scree plot. The y-axis of a Scree plot shows us from 0.1 the eigenvalue of each CA. Multiplied by 100, this tells us how much variability is being contributed by each covariate of interest according to the Bray-Curtis distance. 
 
+### Scree Plot {-}
+
+```{r scree plot, message=FALSE}
 topsp <- names(sort(taxa_sums(GP), TRUE)[1:200])
 GP    <- prune_taxa(topsp, GP)
 
@@ -104,13 +122,21 @@ GP     <- subset_taxa(GP, Phylum %in% names(top5ph))
 
 # Re-add human variable to sample data:
 sample_data(GP)$human <- factor(human)
-sample_data(GP)$human <-ifelse(human == TRUE, "Human", "Not-Human")
+sample_data(GP)$human<-ifelse(human==TRUE, "Human", "Not-Human")
 
 GPca  <- ordinate(GP, "CCA", "bray")
 
-(betadivplot <-plot_ordination(GP, GPca, "samples", color = "SampleType", shape = "human") + 
+plot_scree(GPca, "Scree Plot for Global Patterns Correspondence Analysis") +
+  theme_classic()
+```
+
+From the Scree plot we see that the first 2 CAs are contributing the most variability to the relationship so let's examine how these are influencing the distances between the samples.
+
+```{r ordination plot,message=FALSE}
+
+plot_ordination(GP, GPca, "samples", color="SampleType") + 
   geom_point(size=3) + 
-  theme_minimal())
+  theme_minimal()
 
 ```
 
@@ -122,7 +148,7 @@ Looking at the top half of the graph compared to the bottom half of the graph it
 
 Next, we want to see which particular phyla differ between human and non-human samples. We can do this with a bar plot with abundance graphed along the y-axis and whether the samples are human or not along the x-axis. 
 
-```{r taxa bar, message = FALSE, echo = FALSE}
+```{r taxa bar plot, message=FALSE}
 p1  <- 
   plot_ordination(GP, GPca, "species", color="Phylum")
 
@@ -131,9 +157,9 @@ mdf <-
             id=c("Phylum", "Family", "Genus") )
 
 plot_bar(GP, x="human", fill="SampleType", 
-             facet_grid = ~ Phylum, title = "Most Abundant Phyla Across Groups") + 
-    geom_bar(aes(color = SampleType, fill = SampleType), stat = "identity", position="stack") +
-    theme_minimal() +
+             facet_grid= ~ Phylum, title = "Most Abundant Phyla Across Groups") + 
+    geom_bar(aes(color=SampleType, fill=SampleType), stat="identity", position="stack") +
+    theme_classic() +
     theme(axis.text.x = element_text(angle = 90))
 
 ```
@@ -144,36 +170,17 @@ There are many ways to visualize data in phyloseq, these are just a few examples
 
 ## Statistical Analysis with LDM {-}
 
-We need to recover the data from the phyloseq object and transform the taxa table, asvs, and the metadata objects from phyloseq data objects to data frames. We will use the janitor library's  clean_names function to put all column names into lower case by default and remove any characters R cannot easily work with. For example, the variable "X.Sample.ID" will be converted to "x_sample_id" and since the sample IDs in the asv table are all lower case, we have converted those in the metadata to be all lowercase as well. 
-
-```{r dataprep, message = FALSE, warning = FALSE}
-GP_LDM <- prune_taxa(taxa_sums(GlobalPatterns) > 0, GlobalPatterns)
-
-meta <- as.data.frame(sample_data(GP_LDM))%>%
-  clean_names(case = "snake") %>%
-  mutate(sample_id = tolower(x_sample_id)) %>%
-  arrange(sample_id)
-
-asvs <- as.data.frame(otu_table(GP_LDM)) %>%
-  clean_names()
-
-asvs_t <-as.data.frame(t(asvs)) 
-
-asvs_t <- asvs_t %>%
-  mutate(sample_id = row.names(asvs_t)) %>%
-  arrange(sample_id)
-
-```
-
 Since the ASVs have the taxa as rows and we need them as columns, we can use the t function to prepare the data in the way we need it and transpose the columns into rows and rows into columns. Note that we have 182 taxa and 26 samples.
 
-Next, to remove any statistical noise we may still have to detect relationships between the covariates and microbial composition, we decide to keep only those taxa which appear in at least 5 samples. This is a parameter that will vary by project. 
+Next, to remove any statistical noise we may still have to detect relationships between the covariates and microbial composition, we decide to keep only those taxa which appear in at least 2 samples. This is a parameter that will vary by project. 
 
-```{r filttaxa, message = FALSE, echo = FALSE}
+```{r filter taxa, message=FALSE}
 
-otu_pres <- which(colSums(asvs_t > 0) >= 5)
+asvt <- as.data.frame (t(asvs))
 
-asvs_filt <- asvs_t[,otu_pres]
+otu_pres <- which(colSums(asvt > 0) >= 1)
+
+asvt <- asvt[,otu_pres]
 
 ```
 
@@ -181,56 +188,68 @@ Our exploratory data analysis has suggested that a sample being either from a hu
 
 ### Correspondance Analysis {-}
 
-Above, we colored samples by their type and used different shapes to indicate whether they were from humans or not. Since we are only interested in assessing the impact of whether or not a sample comes from a human, let's look at a Correspondance Analysis plot with samples colored by this variable.
+Since we are only interested in assessing the impact of whether or not a sample comes from a human, let's look at a Correspondance Analysis plot with samples colored by this variable.
 
-```{r ordplot2, message=FALSE}
+```{r ordination plot 2, message=FALSE}
 
-(betadiv_human <-plot_ordination(GP, GPca, "samples", color="human") +
+plot_ordination(GP, GPca, "samples", color="human") + 
   geom_point(size=3) +
-  theme_minimal())
+  theme_minimal()
 
 ```
 
-By coloring the samples by whether the come from humans or not we see that they do appear to have some substantial seperation based on this variable. We should investigate further to determine whether or not this apparent separation results in statistically significantly different microbial communities between human and non-human samples.
+By coloring the samples by whether the come from humans or not we see that they do appear to have some seperation based on this variable. We should investigate further to determine whether or not this apparent seperation results in statistically significantly different microbial communities between human and non-human samples.
 
-To examine this relationship we first specify our model, called by stating we would like to assess whether or not a sample being from a human significantly impacts its microbiome composition.
+To examine this relationship we first specify the data object for our model, called form by stating we would like to assess whether or not a sample being of a different type significantly impacts its microbiome composition while controlling for whether or not that sample comes from a human source. Next, we fit this linear discriminant model using the Bray-Curtis distance. Recall that this distance is one of many metrics available to quantify the between-sample variability or how different each sample group is from one another.
 
 ### Fit the LDM {-}
 
-#FIXME:Error in colSums(otu.table) : 'x' must be numeric
-#3.colSums(otu.table)
-#2.which(colSums(otu.table) > 0)
-#1.ldm(formula = form, data = meta, dist.method = "bray", n.perm.max = 0)
+```{r fit LDM, message=FALSE}
 
-```{r fitLDM, message=FALSE}
-
-form <- asvs_filt ~ human
+form <- asvt | (human) ~type
 
 fit <-ldm(formula = form, 
-          data = meta,
-          dist.method ="bray", 
+          data = metadata, 
+          dist.method="bray", 
           n.perm.max=0)
 
 ```
 
+### Scree Plot {-}
+
+Similarly as above, we will use a scree plot here to quantify how much variability in our model is explained by sample type while controlling for a sample being human or not.
+
+```{r scree plot 2, message=FALSE}
+
+scree.VE.freq <- c(fit$VE.global.freq.submodels/fit$VE.df.submodels,
+                   fit$VE.global.freq.residuals)
+
+color <- c(rep("orange", 1), rep("darkblue", length(scree.VE.freq)-1))
+
+plot(scree.VE.freq/sum(scree.VE.freq), main="frequency scale",
+     xlab="Component", ylab="Proportion of Total Sum of Squares", col=color)
+```
+
+Each dot on this plot represents a variable in the model either one we have recorded in our dataset or so-called surrogate variables which we may not have measured. In this scree plot we see results which support our Correspondance Analysis above, that sample type  (also represented by CA1) is contributing ~25% of the observed variability. 
+
 ### Global Hypothesis Testing {-}
 
-In order to determine whether a sample being from a human or non-human source is statistically significantly contributing to observed differences in microbial composition we first perform a test of the global hypothesis. We want to know, overall, are there differences between human and non-human samples with regard to the composition of the ASVs expressed in each group?
+In order to determine whether sample type (while controlling for a human or non-human source) is statistically significantly contributing to observed differences in microbial composition we first perform a test of the global hypothesis. We want to know, overall, are there differences sample types with regard to the composition of the ASVs expressed in each group?
 
 Since we are performing permuations, we set a seed to be able to reproduce our work each time we run the model. This is key to reproducibility and must be specified. You can use R's built-in seed function or you can pick a number you like as long as you use the same one everytime you need a seed in this analysis and don't mind sharing it.
 
 Now we fit our model, specifying that we only want to do a global test with test.global=TRUE and test.otu=FALSE. We also specify that we want to use the Bray Curtis distance but LDM offers many options to customize this parameter. 
 
-```{r fitglobal, message = FALSE}
+```{r fit global model, message=FALSE, echo = FALSE}
 
-seed <-22310
+(seed=22310)
 
-fit2 <- ldm(formula = form, 
-            data = meta,
-            dist.method = "bray", 
-          test.global = TRUE, 
-          test.otu = FALSE, 
-          seed = seed)
+fit2 <- ldm(formula=form, 
+            data=metadata, 
+            dist.method="bray", 
+            test.global=TRUE, 
+            test.otu=FALSE, 
+            seed=seed)
 
 (global_p <-fit2$p.global.omni)
 
@@ -242,42 +261,68 @@ Since this global hypothesis test has a global p-value of <0.05 (p=0.0001996) it
 
 Let's look more closely at which ASVs are responsible for this. Note that in this model we fit we specify test.otu=TRUE and the FDR is controlled at 0.05. We also specify the same seed as above for reproducibility of results. The FDR specified will vary by project. More exploratory or pilot studies may wish to have a higher FDR where more specific studies may wish to have a smaller one.
 
-```{r fitlocal, message = FALSE}
+```{r fit local model, message=FALSE, echo = FALSE}
 
-fit3 <-ldm(formula = form, 
-           data = meta,
-           dist.method = "bray",
-          test.global=TRUE, 
-          test.otu = TRUE, 
-          fdr.nominal = 0.05, 
-          seed = seed)
+fit3 <-ldm(formula=form, 
+           data=metadata, 
+           dist.method="bray",
+           test.global=TRUE, 
+           test.otu=TRUE, 
+           n.rej.stop=100, 
+           fdr.nominal=0.05, 
+           seed=seed)
 
 ```
 
 After fitting our model, we can find out how many and which ASVs and associated taxa are significiantly differently abundant between human and non-human samples. Here we create a dataframe of results ordered by smallest local FDR and examine the top ten.
 
-```{r results, message=FALSE}
+```{r results,message=FALSE}
 
-taxatable <- as.data.frame(tax_table(GP_LDM)) %>%
-  clean_names()
-
-Kingdom <-taxatable$kingdom
-Phylum <-taxatable$phylum
-Class <-taxatable$class
-Order <-taxatable$order
-Genus <-taxatable$genus
-Species <-taxatable$species
-pvals <-t(fit3$p.otu.omni)
+Kingdom <-taxatable$Kingdom
+Phylum <-taxatable$Phylum
+Class <-taxatable$Class
+Order <-taxatable$Order
+Genus <-taxatable$Genus
+Species <-taxatable$Species
+pvals <-fit3$p.global.omni
 qvals <-t(fit3$q.otu.omni)
 
-res <-data.frame(Kingdom,Phylum,Class,Order,Genus,Species,pvals,qvals)
+results <-data.frame(Kingdom,Phylum,Class,Order,Genus,Species,pvals,qvals)
 
-resqOrdered <- res[order(res$qvals),]
+resqOrdered <- results[order(results$qvals),]
 
 head(resqOrdered, 10)
 ```
 
 Our results appear to be consistent with what we would expect to be the most abundant taxa in non-human as compared to human samples; Chloroplast. The most significantly abundant bacteria may or may not be the most clinically relevant and this will vary by project. Note that p-values and q-values are from the global omnibus tests. p and q values based on frequency scale data or arcsin-root transformed frequency data are also available. 
+
+To prepare a PCoA plot from data generated in LDM we adjust the data by a covariate of interest using the Bray Curtis ordination method, calculate the principal components, extract the eigenvectors, and plot the first two PCos uisng the ggfortify library. This plot suggests that half of the variability 
+
+### Visualization {-}
+```{r viz, message = FALSE, echo = FALSE}
+
+adj <-adjust.data.by.covariates(formula = ~human , 
+                               data = asvt,
+                               otu.table= asvt, 
+                               dist.method="bray")
+
+PCos <- eigen(adj$adj.dist, symmetric=TRUE)
+
+pco_vectors <- as.data.frame(PCos$vectors) %>%
+        mutate(sample_group = as.factor(metadata$human), 
+               sample_id = as.factor(metadata$x_sample_id), 
+               sample_type = as.factor(metadata$sample_type))
+row.names(pco_vectors) <- pco_vectors$sample_id
+
+df <- pco_vectors[c(1, 2)]
+
+(PCoA_LDM <- autoplot(prcomp(df), 
+         data = pco_vectors, 
+         colour = "sample_group",
+         label = FALSE,
+         title = "Variability between Human and Non-human Samples"))
+
+```
 
 We look forward to working with you to customize this pipeline to your experimental design and parameters of interest. For a more specific application and interpretation of these or additional tools and visualizations for your own data, please find our contact information on our [website](https://www.cores.emory.edu/eicc/about/index.html) and examples of some previous graphs [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf)
 
