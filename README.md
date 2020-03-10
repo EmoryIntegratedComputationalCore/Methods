@@ -6,7 +6,7 @@ A selection of the analytical processes and tools we use to provide rigorous, re
 ## DESeq2
 A demonstraton of the R/Bioconductor package DEseq2 to perform differential expression analysis from RNA-Seq count data. DESeq2 primarily uses the Wald test to determine differential expression between comparison groups.
 
-## baySeq (in progress)
+## baySeq
 A demonstraton of the R/Bioconductor package baySeq to perform differential expression analysis from RNA-Seq count data. baySeq uses empirical Bayes methodology to estimate prior and posterior likelihoods of differential expression between comparison groups.
 
 ## edgeR
@@ -14,12 +14,12 @@ A demonstraton of the R/Bioconductor package edgeR to perform differential expre
 
 # Microbiome Methods
 
-## 16s analysis with phyloseq and LDM
+## 16s analysis with phyloseq and LDM (in progress)
 A demonstartion of the R packages phyloseq and LDM. phyloseq takes in data from data processing programs like QIIME, mothur, and Pyrotagger. While QIIME2 offers richness estimates and other exploratory data analysis (ex: alpha and beta diversity metrices) we believe that phyloseq in combination with ggplot2 offers greater flexibility for generating customizable data visualizations. Once exploratory data analysis in phyloseq is complete, we use the LDM package to perform statistical analyses. LDM takes in a table of operational taxonomic units (OTUs) or amplicon sequence variants (ASVs) along with a table of data about the samples (i.e. covariates) and uses a linear decomposition model to associate experimental conditions and covariates of interest with microbial abundance.
 
 # Miscellaneous
 
-## False Discovery Rate Estimation with qvalue
+## False Discovery Rate Estimation with qvalue (in progress)
 A demonstraton of the R/Bioconductor package qvalue to estimate global and local false discovery rates from p-values and test statistics calculated from  differential expression analysis.
 
 ## Power & Sample Size Assesment for RNA-Seq with PROPER (in progress)
