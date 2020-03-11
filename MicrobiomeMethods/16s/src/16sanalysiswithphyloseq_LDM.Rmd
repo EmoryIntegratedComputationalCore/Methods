@@ -1,16 +1,17 @@
 ---
-title: 'Microbiome Analysis (16s) with phyloseq and LDM"'
+title: 'Microbiome Analysis (16s) with phyloseq and LDM'
 author: "Jessica Randall"
 output:
   bookdown::pdf_document2:
-    fig_width: 5
     latex_engine: xelatex
     toc : false
+    
+link-citations: yes
 ---
 
-Briefly, [phyloseq](http://dx.plos.org/10.1371/journal.pone.0061217) takes in data from data processing programs like QIIME, mothur, and Pyrotagger. While QIIME2 offers richness estimates and other exploratory data analysis (ex: alpha and beta diversity metrices) we believe that phyloseq in combination with ggplot2 offers greater flexibility for generating customizable data visualizations. To see a few examples of graphs we've generated using phyloseq, check out our data visualization menu [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf).
+Briefly, [@R-phyloseq] takes in data from data processing programs like QIIME, mothur, and Pyrotagger. While QIIME2 offers richness estimates and other exploratory data analysis (ex: alpha and beta diversity metrices) we believe that phyloseq in combination with ggplot2 offers greater flexibility for generating customizable data visualizations. To see a few examples of graphs we've generated using phyloseq, check out our data visualization menu [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf).
 
-Once exploratory data analysis in phyloseq is complete, we use the [LDM](https://www.biorxiv.org/content/10.1101/229831v2) package from Hu and Satten to perform statistical analyses. LDM takes in a table of operational taxonomic units (OTUs) or amplicon sequence variants (ASVs) along with a table of data about the samples (i.e. covariates) and uses a linear decomposition model to associate experimental conditions and covariates of interest with microbial abundance. Data about the samples typically includes sample names, some experimental condition of interest, and other variables as collected by the experimentors. LDM can accomodate both continuous and categorical data. 
+Once exploratory data analysis in phyloseq is complete, we use the [@R-LDM] package from Hu and Satten to perform statistical analyses. LDM takes in a table of operational taxonomic units (OTUs) or amplicon sequence variants (ASVs) along with a table of data about the samples (i.e. covariates) and uses a linear decomposition model to associate experimental conditions and covariates of interest with microbial abundance. Data about the samples typically includes sample names, some experimental condition of interest, and other variables as collected by the experimentors. LDM can accomodate both continuous and categorical data. 
 
 There are many ways to import data into phyloseq. We typically import the .qza files produced by QIIME2 but in this walkthrough we will be using a built-in dataset that you can use anytime so you can follow along with this walkthrough if desired. For more examples to import data using other programs, see the phyloseq vignette [here](https://bioconductor.org/packages/release/bioc/vignettes/phyloseq/inst/doc/phyloseq-basics.html) Example data comes from the Global Patterns dataset is described in PNAS (Caporoso, 2011). This dataset compares the microbial communities of 25 environmental samples and three known "mock communities"-a total of 9 sample types- at 3.1 million reads/sample. It is natively available within phyloseq.
 
@@ -32,8 +33,12 @@ We will be using the Global Patterns dataset for this walk through but typically
 
 ```{r load packages, message=FALSE}
 
-pacman::p_load("devtools","phyloseq","tidyverse","qiime2R", "ggplot2", 
-              "reshape2", "GUniFrac", "vegan", "LDM", "ggfortify", "assertr", "janitor")
+pacman::p_load("knitr", "devtools","phyloseq","tidyverse",
+               "qiime2R","reshape2", "xml2",
+               "GUniFrac", "vegan", "LDM", 
+               "ggfortify", "assertr", "janitor", "tinytex")
+
+files <-list( biblio = here::here("Emory/EICC/Methods/MicrobiomeMethods/16s/output/packages.bib"))
 
 data ("GlobalPatterns")
 
@@ -45,7 +50,7 @@ In order to improve statistical power to detect differentially abundant taxa we 
 
 With this dataset we would also like to define a categorical variable for sample type which will tell us if the sample is from a human or not since this is a covariate of interest to us and we expect it to account for a large percentage of the variability between the samples. This variable will be project specific.
 
-```{r load data, echo = FALSE, message=FALSE}
+```{r load data, message=FALSE}
 
 GP <- prune_taxa(taxa_sums(GlobalPatterns) > 0, GlobalPatterns)
 
@@ -67,7 +72,7 @@ To compare richness estimates within samples we typically provide the Shannon me
 
 Here we have also specified that we would like the Classic ggplot2 theme,which gives a white background with a rainbow of colors for each box plot. This color scheme is customizable and we would be happy to use one to fit your project. Please see our Data Visualization Menu linked [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf)
 
-```{r alphadiv, message = FALSE, echo = FALSE}
+```{r alphadiv, fig.height = 5, fig.width = 7 , message = FALSE, echo = FALSE}
 
 (alphadivplot <- plot_richness(GP, "SampleType", measures = c("Shannon")) + 
   geom_boxplot(aes(SampleType, value, fill = SampleType), size = 0.5, alpha = 0.6) + 
@@ -94,7 +99,7 @@ There are many metrics for assessing beta diversity and phyloseq includes option
 
 The amount of variability we would expect to see between sample types will vary based on your specific project. In general we do expect that control samples will be very different in their microbial composition than the experimental samples.
 
-```{r betadiv, message = FALSE, echo = FALSE}
+```{r betadiv, echo = FALSE, fig.height  = 5, fig.width = 7, message = FALSE}
 
 topsp <- names(sort(taxa_sums(GP), TRUE)[1:200])
 GP    <- prune_taxa(topsp, GP)
@@ -122,7 +127,7 @@ Looking at the top half of the graph compared to the bottom half of the graph it
 
 Next, we want to see which particular phyla differ between human and non-human samples. We can do this with a bar plot with abundance graphed along the y-axis and whether the samples are human or not along the x-axis. 
 
-```{r taxa bar, message = FALSE, echo = FALSE}
+```{r taxa bar, echo = FALSE, fig.height = 5, fig.width = 8, message = FALSE}
 p1  <- 
   plot_ordination(GP, GPca, "species", color="Phylum")
 
@@ -146,7 +151,8 @@ There are many ways to visualize data in phyloseq, these are just a few examples
 
 We need to recover the data from the phyloseq object and transform the taxa table, asvs, and the metadata objects from phyloseq data objects to data frames. We will use the janitor library's  clean_names function to put all column names into lower case by default and remove any characters R cannot easily work with. For example, the variable "X.Sample.ID" will be converted to "x_sample_id" and since the sample IDs in the asv table are all lower case, we have converted those in the metadata to be all lowercase as well. 
 
-```{r dataprep, message = FALSE, warning = FALSE}
+```{r dataprep, message=FALSE, warning=FALSE}
+
 GP_LDM <- prune_taxa(taxa_sums(GlobalPatterns) > 0, GlobalPatterns)
 
 meta <- as.data.frame(sample_data(GP_LDM))%>%
@@ -157,33 +163,34 @@ meta <- as.data.frame(sample_data(GP_LDM))%>%
 asvs <- as.data.frame(otu_table(GP_LDM)) %>%
   clean_names()
 
-asvs_t <-as.data.frame(t(asvs)) 
-
-asvs_t <- asvs_t %>%
-  mutate(sample_id = row.names(asvs_t)) %>%
+asvs_t <-as.data.frame(t(asvs)) %>%
+  mutate(sample_id = as.factor(meta$x_sample_id)) %>%
   arrange(sample_id)
+row.names(asvs_t) <- asvs_t$sample_id
 
 ```
 
-Since the ASVs have the taxa as rows and we need them as columns, we can use the t function to prepare the data in the way we need it and transpose the columns into rows and rows into columns. Note that we have 182 taxa and 26 samples.
+Since the ASVs have the taxa as rows and we need them as columns, we can use the t function to prepare the data in the way we need it and transpose the columns into rows and rows into columns. Note that at this point we have `r nrow(asvs_t)` samples and `r ncol(asvs_t)` taxa.
 
-Next, to remove any statistical noise we may still have to detect relationships between the covariates and microbial composition, we decide to keep only those taxa which appear in at least 5 samples. This is a parameter that will vary by project. 
+Next, to remove any statistical noise we may still have to detect relationships between the covariates and microbial composition, we decide to keep only those taxa which appear in at least 5 samples. This is a parameter that will vary by project.
 
-```{r filttaxa, message = FALSE, echo = FALSE}
+```{r filttaxa, message = FALSE}
 
-otu_pres <- which(colSums(asvs_t > 0) >= 5)
+otu_pres <- which(colSums(asvs_t[1:18988] > 0) >= 5)
 
 asvs_filt <- asvs_t[,otu_pres]
 
 ```
 
+At this point we have `r nrow(asvs_filt)` samples and `r ncol(asvs_filt)` taxa.
+
 Our exploratory data analysis has suggested that a sample being either from a human or not is an important determination of its microbial composition. Let's test whether or not this relationship is statistically significant. In some cases this variable might be considered a confounder but in this case, since we want to examine the relationship between human and non-human samples and microbial composition, it will be the only covariate of interest. LDM can handle covariates both categorical and continuous and can control for confounders.
 
 ### Correspondance Analysis {-}
 
-Above, we colored samples by their type and used different shapes to indicate whether they were from humans or not. Since we are only interested in assessing the impact of whether or not a sample comes from a human, let's look at a Correspondance Analysis plot with samples colored by this variable.
+Above, we colored samples by their type and used different shapes to indicate whether they were from humans or not. For the purposes of this example we are only interested in assessing the impact of whether or not a sample comes from a human so let's look at a PCoA or Beta Diversity plot with samples colored by this variable.
 
-```{r ordplot2, message=FALSE}
+```{r ordplot2, message = FALSE, echo = FALSE, fig.height = 5, fig.width = 7}
 
 (betadiv_human <-plot_ordination(GP, GPca, "samples", color="human") +
   geom_point(size=3) +
@@ -197,10 +204,6 @@ To examine this relationship we first specify our model, called by stating we wo
 
 ### Fit the LDM {-}
 
-#FIXME:Error in colSums(otu.table) : 'x' must be numeric
-#3.colSums(otu.table)
-#2.which(colSums(otu.table) > 0)
-#1.ldm(formula = form, data = meta, dist.method = "bray", n.perm.max = 0)
 
 ```{r fitLDM, message=FALSE}
 
@@ -238,7 +241,7 @@ fit2 <- ldm(formula = form,
 
 ### ASV-specific Hypothesis Testing {-}
 
-Since this global hypothesis test has a global p-value of <0.05 (p=0.0001996) it appears to suggest that there are statistically significant differences in the microbiome compositions of human and non-human samples. However, since we tested 182 ASVs  with each one representing an individual hypothesis we must correct for multiple testing. Here we use the Benjamini-Hochberg False Discovery Rate to control the FDR at 0.05. 
+Since this global hypothesis test has a global p-value of `r global_p` it appears to suggest that there are statistically significant differences in the microbiome compositions of human and non-human samples. However, since we tested `r ncol(asvs_filt)` ASVs  with each one representing an individual hypothesis we must correct for with a multiple testing correction. Here we use the Benjamini-Hochberg False Discovery Rate to control the FDR at 0.05. 
 
 Let's look more closely at which ASVs are responsible for this. Note that in this model we fit we specify test.otu=TRUE and the FDR is controlled at 0.05. We also specify the same seed as above for reproducibility of results. The FDR specified will vary by project. More exploratory or pilot studies may wish to have a higher FDR where more specific studies may wish to have a smaller one.
 
@@ -256,28 +259,30 @@ fit3 <-ldm(formula = form,
 
 After fitting our model, we can find out how many and which ASVs and associated taxa are significiantly differently abundant between human and non-human samples. Here we create a dataframe of results ordered by smallest local FDR and examine the top ten.
 
-```{r results, message=FALSE}
+```{r results, message=FALSE, echo = FALSE}
 
 taxatable <- as.data.frame(tax_table(GP_LDM)) %>%
   clean_names()
 
-Kingdom <-taxatable$kingdom
-Phylum <-taxatable$phylum
-Class <-taxatable$class
-Order <-taxatable$order
-Genus <-taxatable$genus
-Species <-taxatable$species
+results_taxa <- subset(taxatable, row.names(taxatable) %in% colnames(asvs_filt))
+
+Kingdom <-results_taxa$kingdom
+Phylum <-results_taxa$phylum
+Class <-results_taxa$class
+Order <-results_taxa$order
+Genus <-results_taxa$genus
+Species <-results_taxa$species
 pvals <-t(fit3$p.otu.omni)
 qvals <-t(fit3$q.otu.omni)
 
 res <-data.frame(Kingdom,Phylum,Class,Order,Genus,Species,pvals,qvals)
 
-resqOrdered <- res[order(res$qvals),]
+resqOrdered <- as.data.frame(res[order(res$qvals),])
 
-head(resqOrdered, 10)
+head(resqOrdered,5)
 ```
 
-Our results appear to be consistent with what we would expect to be the most abundant taxa in non-human as compared to human samples; Chloroplast. The most significantly abundant bacteria may or may not be the most clinically relevant and this will vary by project. Note that p-values and q-values are from the global omnibus tests. p and q values based on frequency scale data or arcsin-root transformed frequency data are also available. 
+The most significantly abundant bacteria may or may not be the most clinically relevant and this will vary by project. Note that due to the fidelity of the reference microbiome we use (GreenGenes, Silva, or Human Oral Microbiome), some levels of a given taxa may not be available. Some taxa may have genus and species level information and some may not. Additionally, p-values and q-values are from the global omnibus tests, p and q values based on frequency scale data or arcsin-root transformed frequency data are also available. 
 
 We look forward to working with you to customize this pipeline to your experimental design and parameters of interest. For a more specific application and interpretation of these or additional tools and visualizations for your own data, please find our contact information on our [website](https://www.cores.emory.edu/eicc/about/index.html) and examples of some previous graphs [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf)
 
@@ -287,16 +292,6 @@ We look forward to working with you to customize this pipeline to your experimen
 
 date()
 sessionInfo()
-citation("bookdown")
-citation("devtools")
-citation("phyloseq")
-citation("tidyverse")
-citation("qiime2R")
-citation("ggplot2")
-citation("reshape2")
-citation("GUniFrac")
-citation("vegan")
-citation("LDM")
 
 ```
 <!---- done ---->

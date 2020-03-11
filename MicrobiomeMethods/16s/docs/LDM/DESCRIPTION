@@ -1,0 +1,16 @@
+Package: LDM
+Type: Package
+Title: Testing Hypotheses about the Microbiome using the Linear
+        Decomposition Model
+Version: 1.0
+Date: 2019-2-6
+Depends: GUniFrac, vegan
+Suggests: R.rsp
+VignetteBuilder: R.rsp
+Author: Yi-Juan Hu and Glen A. Satten <gas0@cdc.gov>
+Maintainer: Yi-Juan Hu  <yijuan.hu@emory.edu>
+Description: The LDM package provides a single analysis path that includes distance-based ordination, global tests of any effect of the microbiome, and tests of the effects of individual OTUs (i.e., operational taxonomic units) with false discovery rate (FDR)-based correction for multiple testing. It accommodates both continuous and discrete variables (e.g., clinical outcomes, environmental factors, treatment groups) as well as interaction terms to be tested either singly or in combination, allows for adjustment of confounding covariates, and uses permutation-based p-values that can control for correlation (e.g., repeated measurements on the same individual). It can also be applied to transformed data, and an `omnibus' test can easily combine results from analyses conducted on different transformation scales.
+License: GPL (>=2)
+NeedsCompilation: no
+RoxygenNote: 6.1.1.9000
+Packaged: 2019-02-06 18:59:15 UTC; yil
