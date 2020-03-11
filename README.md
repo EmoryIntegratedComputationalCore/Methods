@@ -6,8 +6,7 @@ A selection of the analytical processes and tools we use to provide rigorous, re
 ## [DESeq2](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/RNASeqbulkMethods/DESeq2/output/DEGAnalysiswithDESeq2.pdf)
 A demonstraton of the R/Bioconductor package DEseq2 to perform differential expression analysis from RNA-Seq count data. DESeq2 primarily uses the Wald test to determine differential expression between comparison groups.
 
-## [baySeq]
-(https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/RNASeqbulkMethods/bayseq/output/DEGAnalysiswithbayseq.pdf)
+## [baySeq](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/RNASeqbulkMethods/bayseq/output/DEGAnalysiswithbayseq.pdf)
 A demonstraton of the R/Bioconductor package baySeq to perform differential expression analysis from RNA-Seq count data. baySeq uses empirical Bayes methodology to estimate prior and posterior likelihoods of differential expression between comparison groups.
 
 ## [edgeR](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/RNASeqbulkMethods/edgeR/output/DEGAnalysiswithedgeR.pdf)
