@@ -22,5 +22,5 @@ A demonstartion of the R packages phyloseq and LDM. phyloseq takes in data from 
 ## [Power & Sample Size Assesment for RNA-Seq with PROPER](https://github.com/EmoryIntegratedComputationalCore/Methods/tree/master/Miscellaneous/PROPER/output/PROPER.pdf)
 A demonstration of the R/Bioconductor package PROPER which uses simulation of experimental design constraints to provide guidance on how many people each comparison group needs for sufficient statistical power.
 
-## [False Discovery Rate Estimation with qvalue] (https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/Miscellaneous/qvalue/output/qvalue.pdf)
+## [False Discovery Rate Estimation with qvalue](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/Miscellaneous/qvalue/output/qvalue.pdf)
 A demonstraton of the R/Bioconductor package qvalue to estimate global and local false discovery rates from p-values and test statistics calculated from  differential expression analysis.
