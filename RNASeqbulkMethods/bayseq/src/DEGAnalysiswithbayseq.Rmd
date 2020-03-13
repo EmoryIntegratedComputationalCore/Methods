@@ -49,10 +49,9 @@ Please reach out to EICC if you would like to compare 3 or more groups as this i
 
 ```{r load libs and data, message = FALSE, echo = FALSE}
 
-require ("pacman")
-
-p_load("rmarkdown","readr","here", "dplyr", "knitr", "tidyr", "baySeq",
+pacman::p_load("rmarkdown","readr","here", "dplyr", "knitr", "tidyr", "baySeq",
        "DESeq2", "vsn", "ggplot2", "EnhancedVolcano", "pheatmap", "random", "tinytex")
+
 set.seed(seed= 22310)
 
 theme_set(theme_minimal())

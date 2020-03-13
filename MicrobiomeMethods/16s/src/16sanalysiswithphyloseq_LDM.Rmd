@@ -38,8 +38,6 @@ pacman::p_load("knitr", "devtools","phyloseq","tidyverse",
                "GUniFrac", "vegan", "LDM", 
                "ggfortify", "assertr", "janitor", "tinytex")
 
-files <-list( biblio = here::here("Emory/EICC/Methods/MicrobiomeMethods/16s/output/packages.bib"))
-
 data ("GlobalPatterns")
 
 ```

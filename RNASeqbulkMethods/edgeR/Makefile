@@ -20,7 +20,6 @@ clean:
 		
 output/DEGAnalysiswithedgeR.pdf: \
 					src/DEGAnalysiswithedgeR.Rmd
-			-rm src/DEGAnalysiswithedgeR.pdf
 			Rscript --vanilla -e "rmarkdown::render('$<')"
 			mv src/DEGAnalysiswithedgeR.pdf $@
 # done.

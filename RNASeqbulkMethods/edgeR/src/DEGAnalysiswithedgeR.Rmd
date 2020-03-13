@@ -50,9 +50,9 @@ p_load("readr", "abind","dplyr", "knitr", "tidyr", "edgeR",
 
 theme_set(theme_minimal())
 
-countdata <- as.matrix(read.csv(system.file("extdata", 
-                                            "pasilla_gene_counts.tsv",
-                                            package="pasilla",mustWork=TRUE), sep = "\t", row.names = "gene_id"))
+countdata <- read.delim(system.file("extdata", 
+                                    "pasilla_gene_counts.tsv",
+                                    package="pasilla",mustWork=TRUE), sep = "\t", row.names = "gene_id")
 
 sampledata <- as.data.frame(read.csv(system.file("extdata",
                                                  "pasilla_sample_annotation.csv",
@@ -108,7 +108,7 @@ By default, edgeR produces a general multi-dimensional scaling plot that tells u
 colors <- rep(c("red", "blue"), 2)
 
 plotMDS.DGEList(y2, 
-                col=colors[sampledata$condition], 
+                col=colors[y$sampledata$condition], 
                 gene.selection="common",
                 main="Variability between Samples by Condition")
 
@@ -239,7 +239,14 @@ o <- order(qlf$table$PValue)
 
 logCPM <- logCPM[o[1:20],]
 
-coolmap(logCPM, margins=c(8,8))
+
+RdBu11 <-c("#053061", "#2166ac", "#4393c3", "#92c5de", "#d1e5f0", "#f7f7f7",
+                "#fddbc7", "#f4a582", "#d6604d", "#b2182b", "#67001f")
+
+#plot
+coolmap(logCPM,
+        margins=c(8,8), 
+        col = RdBu11)
 
 ```
 
@@ -252,6 +259,8 @@ A volcano plot is technically a scatter plot where the x-axis has the log2 trans
 
 volcano <- as.data.frame(topTags(qlf, n = 7919))
 
+RdBu4 <- c("#92c5de", "#0571b0", "#f4a582", "#ca0020")
+
 EnhancedVolcano(volcano,
                 lab = row.names(volcano),
                 x = "logFC",
@@ -261,6 +270,7 @@ EnhancedVolcano(volcano,
                 FCcutoff = 1.0, 
                 pCutoff = 0.05,
                 pLabellingCutoff = 0.05,
+                col = RdBu4,
                 subtitle= "Log(2) Fold Change vs -log(10) FDR values",
                 legendPosition = "bottom",
                 legend=c("NS", "Log2 fold-change", "FDR",
