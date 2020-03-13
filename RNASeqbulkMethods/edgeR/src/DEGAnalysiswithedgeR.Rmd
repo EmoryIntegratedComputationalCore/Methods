@@ -44,11 +44,7 @@ Please reach out to EICC if you would like to compare 3 or more groups as this i
 
 ```{r load libs and data, message = FALSE, echo = FALSE}
 
-require ("pacman")
-p_load("readr", "abind","dplyr", "knitr", "tidyr", "edgeR", 
-       "ggplot2", "EnhancedVolcano")
-
-theme_set(theme_minimal())
+pacman::p_load("readr", "knitr", "tidyverse", "edgeR", "RColorBrewer", "EnhancedVolcano")
 
 countdata <- read.delim(system.file("extdata", 
                                     "pasilla_gene_counts.tsv",
@@ -105,10 +101,12 @@ At this point we generate our first exploratory visualization, the principal com
 By default, edgeR produces a general multi-dimensional scaling plot that tells us how closely related the samples are to each other by log fold changes. We can specify that we would like to view the special case of a PCA plot which tells us how much group membership (i.e. being untreated or treated) contributes to the differences between the samples and we hope this will be high. 
 
 ```{r exploratory pca, fig.height=6, fig.width=6, echo = FALSE, message = FALSE}
-colors <- rep(c("red", "blue"), 2)
+
+#two extreme colors from the RdYlBU palette on colorbrewer2.org, blue, red
+colors <- rep(c("#313695", "#d73027"), 2)
 
 plotMDS.DGEList(y2, 
-                col=colors[y$sampledata$condition], 
+                col=colors[y2$sample$group], 
                 gene.selection="common",
                 main="Variability between Samples by Condition")
 
