@@ -13,7 +13,6 @@ A demonstraton of the R/Bioconductor package baySeq to perform differential expr
 A demonstraton of the R/Bioconductor package edgeR to perform differential expression analysis from RNA-Seq count data. edgeR primarily uses the quasi-likelihood F test to determine differential expression between comparison groups.
 
 # Microbiome Methods
-
 ## [16s analysis with phyloseq and LDM](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/MicrobiomeMethods/16s/output/16sAnalysiswithphyloseq_LDM.pdf)
 A demonstration of the R packages phyloseq and LDM. phyloseq takes in data from data processing programs like QIIME, mothur, and Pyrotagger. While QIIME2 offers richness estimates and other exploratory data analysis (ex: alpha and beta diversity metrices) we believe that phyloseq in combination with ggplot2 offers greater flexibility for generating customizable data visualizations. Once exploratory data analysis in phyloseq is complete, we use the LDM package to perform statistical analyses. LDM takes in a table of operational taxonomic units (OTUs) or amplicon sequence variants (ASVs) along with a table of data about the samples (i.e. covariates) and uses a linear decomposition model to associate experimental conditions and covariates of interest with microbial abundance.
 
