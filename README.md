@@ -14,7 +14,7 @@ A demonstraton of the R/Bioconductor package edgeR to perform differential expre
 
 # Microbiome Methods
 
-## 16s analysis with phyloseq and LDM (in progress)
+## 16s analysis with phyloseq and LDM
 A demonstartion of the R packages phyloseq and LDM. phyloseq takes in data from data processing programs like QIIME, mothur, and Pyrotagger. While QIIME2 offers richness estimates and other exploratory data analysis (ex: alpha and beta diversity metrices) we believe that phyloseq in combination with ggplot2 offers greater flexibility for generating customizable data visualizations. Once exploratory data analysis in phyloseq is complete, we use the LDM package to perform statistical analyses. LDM takes in a table of operational taxonomic units (OTUs) or amplicon sequence variants (ASVs) along with a table of data about the samples (i.e. covariates) and uses a linear decomposition model to associate experimental conditions and covariates of interest with microbial abundance.
 
 # Miscellaneous
