@@ -9,9 +9,9 @@ output:
 link-citations: yes
 ---
 
-Briefly, [@R-phyloseq] takes in data from data processing programs like QIIME, mothur, and Pyrotagger. While QIIME2 offers richness estimates and other exploratory data analysis (ex: alpha and beta diversity metrices) we believe that phyloseq in combination with ggplot2 offers greater flexibility for generating customizable data visualizations. To see a few examples of graphs we've generated using phyloseq, check out our data visualization menu [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf).
+Briefly, [phyloseq](https://bioconductor.org/packages/release/bioc/html/phyloseq.html) takes in data from data processing programs like QIIME, mothur, and Pyrotagger. While QIIME2 offers richness estimates and other exploratory data analysis (ex: alpha and beta diversity metrices) we believe that phyloseq in combination with ggplot2 offers greater flexibility for generating customizable data visualizations. To see a few examples of graphs we've generated using phyloseq, check out our data visualization menu [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf).
 
-Once exploratory data analysis in phyloseq is complete, we use the [@R-LDM] package from Hu and Satten to perform statistical analyses. LDM takes in a table of operational taxonomic units (OTUs) or amplicon sequence variants (ASVs) along with a table of data about the samples (i.e. covariates) and uses a linear decomposition model to associate experimental conditions and covariates of interest with microbial abundance. Data about the samples typically includes sample names, some experimental condition of interest, and other variables as collected by the experimentors. LDM can accomodate both continuous and categorical data. 
+Once exploratory data analysis in phyloseq is complete, we use the [LDM](https://github.com/yijuanhu/LDM)package from Hu and Satten to perform statistical analyses. LDM takes in a table of operational taxonomic units (OTUs) or amplicon sequence variants (ASVs) along with a table of data about the samples (i.e. covariates) and uses a linear decomposition model to associate experimental conditions and covariates of interest with microbial abundance. Data about the samples typically includes sample names, some experimental condition of interest, and other variables as collected by the experimentors. LDM can accomodate both continuous and categorical data. 
 
 There are many ways to import data into phyloseq. We typically import the .qza files produced by QIIME2 but in this walkthrough we will be using a built-in dataset that you can use anytime so you can follow along with this walkthrough if desired. For more examples to import data using other programs, see the phyloseq vignette [here](https://bioconductor.org/packages/release/bioc/vignettes/phyloseq/inst/doc/phyloseq-basics.html) Example data comes from the Global Patterns dataset is described in PNAS (Caporoso, 2011). This dataset compares the microbial communities of 25 environmental samples and three known "mock communities"-a total of 9 sample types- at 3.1 million reads/sample. It is natively available within phyloseq.
 
@@ -37,8 +37,6 @@ pacman::p_load("knitr", "devtools","phyloseq","tidyverse",
                "qiime2R","reshape2", "xml2",
                "GUniFrac", "vegan", "LDM", 
                "ggfortify", "assertr", "janitor", "tinytex")
-
-files <-list( biblio = here::here("Emory/EICC/Methods/MicrobiomeMethods/16s/output/packages.bib"))
 
 data ("GlobalPatterns")
 

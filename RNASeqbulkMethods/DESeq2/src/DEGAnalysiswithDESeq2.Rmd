@@ -38,8 +38,8 @@ We're also going to specify that we'd like the row names of our sample data to c
 Please reach out to EICC if you would like to compare 3 or more groups as this is a simplified example. It may also be the case you will need more than 6 samples per experimental group or that you may need to remove genes with average counts greater than 5, 10, 15, or even 20 for sufficient statistical power. Please see our PROPER walk-through for an example of our of power and sample size analysis.
 
 ```{r load libs and data, message = FALSE, echo = FALSE}
-require ("pacman")
-p_load("readr", "dplyr", "knitr", 
+
+pacman::p_load("readr", "dplyr", "knitr", 
        "DESeq2", "vsn", "ggplot2", 
        "pheatmap", "EnhancedVolcano", "apeglm", "tinytex")
 

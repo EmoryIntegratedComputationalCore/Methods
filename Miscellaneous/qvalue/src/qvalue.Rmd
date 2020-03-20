@@ -1,0 +1,158 @@
+---
+title: "False Discovery Rate (FDR) Estimation with qvalue"
+author: "EICC : Jessica Randall"
+output:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+    toc : false
+    
+link-citations: yes
+---
+Briefly, [qvalue](http://github.com/jdstorey/qvalue) takes in p-values and adjusts them to account for the multiple hypothesis tests. If you are new to multiple hypothesis testing, check out this [article](https://www.nature.com/articles/nbt1209-1135) from Noble (2009) for a succint overview of the concept.
+
+Multiple hypothesis testing is a crucial aspect of RNA-seq differential expression (DE) analysis. This is why you may see results reported in terms of FDR or adjusted p-vlaues rather than nominal p-values. Each gene represents an individual test of a null hypothesis with its own individual likelihood of producing a false positive result, which is usually around 20%. Multiply that by 24000 genes and the likelihood is extremely high that many of the genes found to statistically significnatly differentially expressed at a nominal p-value of 0.05 would be false positive findings which would waste the time and resources of anyone attempting to run down any results based on the p-value with a biological test. 
+
+You may have heard of the Bonferroni correction for multiple hypothesis testing. While Bonferroni is often useful, it has been found to be too struct with regard to DEG analysis. Methods like Benjamini-Hochberg correction or the Storey false discovery rate used for DEG analysis account for the library size and the inherent biological variability between each sample while Bonferroni does not. By taking these characteristics into account, these methods balance the number of truly DEG findings identified while limiting the number of false positive DEG findings.
+
+For this example we will be using the [Hendenfalk (2001)](https://www.nejm.org/doi/full/10.1056/NEJM200102223440801) data. For this data, comparisons were made between between 3,226 genes of two mutation types, BRCA1 (7 arrays) and BRCA2 (8 arrays).
+
+### Definition of terms {-}
+
+#### False Discovery Rate (FDR) {-} 
+
+Nominal p values vs adjusted p values/(FDR): In DEG analysis, a single p-value tells you how likely it is that a single gene is differentially expressed between at least two groups (ex: a control and a treatment group) due to some actual difference between the groups as opposed to random chance. The False Discovery Rate (FDR) tells you how likely it is that all genes identified as DE are false positives. A FDR of 5% means that among all genes called DE, an average of 5% of those are truly not DE. DE genes are only considered significantly so if they meet the adjusted p value, not only the nominal p value. The local FDR or q-value tells you the likelihood that a given gene is statistically significant due to some true difference between the groups rather than by random chance. 
+
+### Loading R packages {-}
+
+Our very first step is to load the qvalue package rom Bioconductor. Please see [Bioconductor](http://bioconductor.org/) for information about installation and use of Bioconductor and its packages.
+
+```{r load packs, message=FALSE, warning = FALSE}
+
+pacman::p_load("tidyverse", "qvalue")
+
+data(hedenfalk)
+
+```
+
+### Preparing the data {-}
+
+We import the nominal p-values from the Hendenfalk 2001 data and use them to create the package specific qvalue data object. 
+
+```{r prepdata, message=FALSE}
+
+pvalues <- hedenfalk$p
+
+qobj <- qvalue(p = pvalues)
+
+```
+
+### Checking assumptions {-}
+
+Next, we check out the histogram of the p-values. This allows us to examine the distribution 
+of the p-values and check the package assumption that they should be relatively uniform. 
+This means they will look like one big slope with a high frequency of values of 0.0 (left side) 
+and lower and lower values towards the right of the graph. If this assumption is not met and 
+your p-values look like a U shape, sine curve, or any other funky thing, this package will 
+provide you with faulty analysis if you do not do something to make that assumption hold. 
+
+Please contact EICC and depending on why your p-values are looking unusual we may be able to fix it for you.
+
+```{r histo, message=FALSE, echo = FALSE}
+
+pvalues_df <- as.data.frame(hedenfalk$p)
+
+ggplot(pvalues_df, aes(pvalues)) + 
+  geom_histogram(show.legend = TRUE, 
+                 na.rm = TRUE, 
+                 binwidth = 0.02) +
+  theme_minimal()
+
+```
+
+In our example, the p-values are largely flat along the right tail of the histogram. This suggests that the true null p-values do follow the assumed Uniform distribution. If you try this on your own data and do not see this with your p-vales at the appropriate bin width, please feel free to each out to EICC for assistance.
+
+### Creating the qvalue object {-}
+
+Next, we create the qvalue object. qvalue gives us many options to do this. These all matter and all vary by project as to which are appropriate, the default options are not going to work for everyone, if anyone.
+
+For this example we have done our literature review and decided (prior to running our sequencing) that we are comfortable with FDR of 0.1 (10%). Recall that this means that of all genes called DE, 
+an average of 10% of those are false positives. In our case this would mean if we have 100 genes which are called DE, we are comfortable with up to 10 of them being false positives. This is the assumption 
+that a popular DE analysis package, edgeR, makes and the accuracy of the results you get from edgeR depend on these assumptions.
+
+
+###### Controlling vs. Estimating FDR {-}
+
+In controlling FDR, you set a FDR you are comfortable with a priori, you run your sequencing, you do your pairwise comparisons, and you see which genes meet that pre-specified FDR threshold. 
+In estimating FDR, you run your sequencing, do your pairwise comparisons tests, and afterwards, you specify how comfortable you are with the possibility that a gene or group of genes which have been called DE is/are false positives.
+
+Estimating FDR means that you run the risk of missing DE genes you may be interested in investivating. Controlling FDR means that you may have more genes identifed as DE than you can make sense of and many
+of them may be false positives. The choice you make depends on whether your experiment is exploratory or looking to assess one or a group of genes in particular. EICC would be happy to work with you to design your experiment to meet your goals.
+
+```{r createqobj, message=FALSE, echo = FALSE}
+
+qobj <- qvalue(p=pvalues, 
+               fdr.level=0.1, 
+               lambda=0, 
+               pi0.method="smoother")
+
+```
+
+### Summarizing {-}
+
+Below is a summary of some of the information available to us in the qvalue object.
+
+```{r qsum, message=FALSE}
+
+summary(qobj)
+
+```
+
+From this summary we see that at our pre-specified FDR of 0.1 we determine that all genes with q-values less than or equal to 0.1 are significant. This gives us 218 significant genes with the understanding that up to 22 DE genes may be false positives.
+
+Controlling FDR gave us a large number of genes to investigate further. We decided that we would risk up to 10% of these being false positives if we could find as many DE genes as possible. 
+
+If we had decided at the beginning to estimate FDR, we could have used the q-value of <0.025 and had a list of 20 genes to follow up on along with an estimate of how likely it is that each gene is a false positive, and comfortable with up to 2 of them being false positives.
+
+This choice of controlling or estimating FDR is one EICC is happy to help you make to get the most actionable results from your projects.
+
+### Visualizing {-}
+
+qvalue also offers a number of visualization options to assess your findings. Here is one example of the types of plots you can generate.
+
+Overall, these graphs show us how closely our estimate of the null hypothesis (that no genes are DE) resembles reality, how many genes are DE, and how many false positives we can expect from our q-value cut-off.
+
+```{r viz, message=FALSE, echo = FALSE}
+
+plot(qobj)
+
+```
+
+For a more specific application and interpretation of these or additional tools and visualizations for your own data, please find our contact information on our [website](https://www.cores.emory.edu/eicc/about/index.html)
+
+
+### Session information and References {-}
+
+```{r sessioninfo, message = FALSE, echo = FALSE}
+date()
+sessionInfo()
+citation("bookdown")
+citation("tidyverse")
+citation("qvalue")
+```
+<!---- done ---->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
