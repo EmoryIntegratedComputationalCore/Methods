@@ -12,14 +12,14 @@ HERE := $(shell Rscript --vanilla -e 'write(here::here(), stdout())')
 
 .PHONY:	all clean
 
-all: output/DEGAnalysiswithedgeR.pdf
+all: output/edgeR.pdf
 
 clean:
 	
 					-rm -r output/*
 		
-output/DEGAnalysiswithedgeR.pdf: \
-					src/DEGAnalysiswithedgeR.Rmd
+output/edgeR.pdf: \
+					src/edgeR.Rmd
 			Rscript --vanilla -e "rmarkdown::render('$<')"
-			mv src/DEGAnalysiswithedgeR.pdf $@
+			mv src/edgeR.pdf $@
 # done.
