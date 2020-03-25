@@ -1,0 +1,460 @@
+---
+title: 'RNA-seq Differential Expression (DE) Analysis Using DESeq2'
+author: "Jessica Randall"
+output:
+  bookdown::pdf_document2:
+    fig_width: 5
+    latex_engine: xelatex
+    toc : false
+---
+Briefly, DESeq2 uses a Wald test to determine differential gene expression 
+between at least two groups. DESeq2 assumes a negative binomial model which
+mathematically accounts for the fact that we are assessing gene counts and we 
+are assuming that most genes we are comparing between the groups will not be 
+differential expressed.
+
+Linked is the [original 
+paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-014-0550-
+8) 
+from Anders & Huber introducing the concepts implemented in DESeq2. We will be
+using the [pasilla 
+package](https://www.bioconductor.org/packages/release/data/experiment/html/pasi
+lla.html) for our example data.
+
+Please note that DESeq2 has a number of capabilities that we will not be 
+covering. You can import data for use in DESeq2 in several different ways, 
+there are options for single cell projects, for incorporating Bayesian 
+statistics, for time-series experiments, for outliers, for obtaining all of 
+the results that DESeq2 functions produce, and even more options for graphing 
+(including an R shiny app we plan to cover in a future walk-through) so we 
+strongly encourage you to reach out to EICC with questions regarding options 
+available to you with DESeq2. Check out some of the graphs from previous 
+projects 
+[here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
+ataVisualizationMenu.pdf).
+
+### Definition of terms {-}
+
+#### Wald test: {-}
+
+DESeq2 offers two options with how it determines differential expression, 
+the Wald test and the Likelihood Ratio Test. Users of edgeR may be familiar 
+with the latter. In DESeq2, the default test for pairwise comparison analysis 
+is called the Wald Test and it is looking at your control and your 
+experimentalsamples to see if the difference between them is equal to zero or 
+not. 
+
+Compared to edgeR it has been our experience that DESeq2 is more liberal in 
+its calling of genes as significantly DE. If you are not sure which or how many 
+DE genes you are expecting to find in your experiment, DESeq2 would likely the 
+best analysis tool for your data.
+
+#### Unadjusted p values vs adjusted p-values/(FDR): {-} 
+
+In DE analysis, a single p-value tells you how likely it is that a single gene 
+is differentially expressed between at least two groups (ex: a control and a 
+treatment group) due to some actual difference between the groups as opposed to 
+random chance. False Discovery Rate (FDR) tells you how likely it is that all 
+genes identified as DE are false positives. A FDR of 5% means that among all 
+genes called DE, an average of 5% of those are truly not DE. DE genes are only 
+considered significantly so if they meet the adjusted p value, not only the 
+unadjusted p-value. FDRs for each individual gene are called q-values or local 
+FDRs. 
+
+### Loading data {-}
+
+Our very first step is to load the libraries we'll need to assess the functions 
+required for analysis and graphing. Please see 
+[Bioconductor](http://bioconductor.org/) 
+for information about initial installation and use of Bioconductor and its 
+packages. We also set the minimal theme in gglot2 for all graphs to have the 
+same aesthetic features by default.
+
+The pasilla experiment studied RNAi knockdown of Pasilla, the Drosophila 
+melanogaster ortholog of mammalian NOVA1 and NOVA2, on the transcriptome. 
+Data are provided by NCBI Gene Expression Omnibus under accession numbers 
+GSM461176 to GSM461181.
+
+DESeq2 offers many options for importing count data and data about your 
+samples. Here we will demonstrate importing the count matrix and sample data 
+from the pasilla package since we're using it as an example. Typically we will 
+use the here package to specify the path for the counts and sample data files 
+in a list of files to import and export from the task. 
+
+We're also going to specify that we'd like the row names of our sample data to 
+come from the first column, called "file" since this is where we've stored 
+which sample is which and finally we remove extra columns from our sample 
+data which we won't be using in our analysis.
+
+Please reach out to EICC if you would like to compare 3 or more groups as this 
+is a simplified example. It may also be the case you will need more than 6 
+samples per experimental group or that you may need to remove genes with 
+average counts greater than 5, 10, 15, or even 20 for sufficient statistical 
+power. Please see our PROPER walk-through for an example of our of power and 
+sample size analysis.
+
+```{r load libs and data, message = FALSE, echo = FALSE}
+
+pacman::p_load("readr", "dplyr", "knitr", 
+       "DESeq2", "vsn", "ggplot2", 
+       "pheatmap", "EnhancedVolcano", "apeglm", "tinytex")
+
+theme_set(theme_minimal())
+
+countdata <- as.matrix(read.csv(system.file("extdata",
+                                            "pasilla_gene_counts.tsv",
+                                            package="pasilla",mustWork=TRUE),
+                                sep = "\t", row.names = "gene_id"))
+
+sampledata <- as.data.frame(
+                            read.csv
+                            (system.file("extdata",
+                                         "pasilla_sample_annotation.csv",
+                                         package="pasilla", mustWork=TRUE), 
+                             row.names = 1))
+
+sampledata <- sampledata[,c("condition","type")]
+```
+
+Our data is almost ready to analyze but first, DESeq2 requires that the row 
+names of the sample data are the same as the column names of the count data. 
+This is why we used the informal unit test below to check before proceeding 
+with analysis. In order to do the matrix multiplication as part of the 
+analysis, we need to have the samples in the counts file be labelled in the 
+same way they are in the first column of the sample data file, typically this 
+is where sample ids or abbreviated sample names are stored.
+
+```{r check sample names, message = FALSE}
+
+rownames(sampledata) <- sub("fb", "", rownames(sampledata))
+
+countdata <- countdata[,rownames(sampledata)]
+
+stopifnot(rownames(sampledata) %in% colnames(countdata))
+
+```
+
+Now that we know this is true, we can proceed.
+
+### Preparing for Analysis {-}
+
+In order to preform a differentially expression analysis, we need to specify 
+some information about our data. In DESeq2 we must create a special object 
+called a DESeqdataset object, here abbreviated as dds. This object takes in 
+the count data, the sample data, and the variable we would like to compare 
+between the samples as inputs.
+
+Next, we specify that the untreated group is our reference group to which 
+we would like to compare our treated samples.
+
+``` {r create dds object, message = FALSE}
+dds <- DESeqDataSetFromMatrix(countData = countdata,
+                              colData = sampledata,
+                              design = ~ condition)
+
+dds$condition <- relevel(dds$condition, ref = "untreated")
+```
+
+If we had any additional data to add about the samples that we wanted to 
+include in our analysis we would add it next but since this is a simplified 
+example, we are only comparing treated and control samples without taking into 
+account any additional information about them.
+
+At this point we generate our first exploratory visualization, the principal 
+components analysis plot. This will show us how your data cluster or how 
+similar each sample is to others of the same group. There are percentages 
+along the axes and the percentage on the x-axis tells us how much the 
+differences between the samples is explained by them being treated or 
+untreated. 
+
+We start by transforming our data using the variance stabilizing transformation 
+available from the vsn library (Tibshirani 1988; Huber et al. 2003; Anders and 
+Huber 2010). This is similar to using a log2 transformation with normally 
+distributed data with many very small values. VST adjust the data such that 
+if the means of the rows are small, as they often are in gene counts, the 
+variance will remain relatively constant across all all counts. Doing this 
+allows the user to cluster the samples into experimentally interesting groups 
+in graphs rather than seeing groups clustered by their variance. We then 
+typically save this as a data frame to export to clients. 
+
+We can use the same plotPCA function to obtain the coordinates for each sample 
+on the plot. This is helpful in identifying samples we would consider outliers 
+since we haven't labelled each sample on the graph. 
+
+```{r exploratory pca, fig.height=5, fig.width=5, echo = FALSE}
+vst_dds <- vst(dds, blind=FALSE)
+
+pca_coords <- plotPCA(vst_dds, 
+                      intgroup=c("condition"), 
+                      returnData = TRUE)
+
+plotPCA(vst_dds, intgroup=c("condition"))
+
+```
+
+We would interpret this as the samples being somewhat clustered clearly by 
+group and interpret the percentage on the x-axis as 58% of the variability 
+between these samples is due to them being treated or untreated. I might also 
+say that the within-group variability between samples in the treated group is 
+probably contributing some noise to our ability to detect differences between 
+the treated and untreated groups. The y-axis tells us how much variability 
+between these samples is due to other factors in our model or if we have none, 
+sources of variability we may not have accounted for like sex or ethnicity 
+which are often leading contributors of variability between samples and should 
+be accounted for in experimental design if you wish to control for their 
+effects. 
+
+### Prefiltering {-}
+
+Typically we want to ignore genes that have counts of zero across all samples 
+since these are adding statistical noise. We may also want to be more stringent 
+and remove genes with rows that sum to 10, 20 or even 30 or less since these 
+could also be contributing noise.
+
+DESeq2 will filter genes it deems as low counts automatically based on the sum 
+of the mean-normalized counts in each row. We'll see the criteria chosen when 
+we view the results of our analysis later on. The results will tell you how 
+many genes were removed and how many remain. If you would like to specify your 
+own cut-offs for filtering or if you do not want DESeq2 to do any additional 
+filtering, these are parameters that can be adjusted. 
+
+If you choose to do DE analysis through EICC we typically rely on DESeq2's 
+robust filtering since it tends to increase power to detect DE genes but we 
+would customize this part of the analysis based on your data should you choose 
+to do so.
+
+### Testing {-}
+
+DESeq2's analysis step is almost deceptively user-friendly compared to the 
+analysis steps of edgeR and baySeq. It will tell you the steps it is taking 
+with your data and you have the option to ask for additional output and 
+customization but it keeps necessary user input to a minimum for most simple 
+experiments.
+
+The default analysis explained here is the use of the Wald test. DESeq2 also 
+offers the option of the Likelihood Ratio test. Both of these tests rely on the 
+assumption that your count data follow a negative binomial distribution which 
+means that we assume that most counts are very low and that there are more 
+non-DE genes between the groups than there are DE genes. Which test we choose 
+will depend on your experimental design and properties of your data. Our 
+summary presentations for clients typically include information on the model we 
+chose, justification, and the null and alternative hypotheses of that model.
+
+Since we want to be especially sure we are comparing our treated group to the 
+untreated group (and not the over way around) we use the resultsNames function 
+(not shown) to identify the comparisons available and select the one we'd like 
+to see. In this case, based on condition, we want to see the results of the 
+treated vs untreated. If we had other groups, we would see other options in the 
+place of the "treated" group but since we set our reference group to 
+"untreated" all comparisons would have that group listed second. This avoids 
+having to re-run the DESeq function at every new comparison desired.
+
+Next, we create our results with the results function, use the summary function 
+to see a tabular summary of them, and save them as a data frame for further 
+manipulation. In the results function we also specify that we would like to set 
+the FDR to 0.05. By setting the FDR here, we can experiment with different 
+cut-offs based on what we're willing to accept. 
+
+The summary gives you information about the total number of genes with non-zero 
+read counts, the FDR specified above, the exact number and total percentage of 
+the up and down regulated DE genes, the presence of any outliers, and the 
+removal of any additional genes with low counts.
+
+``` {r test, message = FALSE, echo = FALSE}
+
+dds <- DESeq(dds)
+
+res <- results(dds, 
+               alpha=0.05, 
+               name = "condition_treated_vs_untreated")
+
+summary(res)
+
+```
+### Results {-}
+
+In this example we see that while controlling the adjusted p/FDR threshold at 
+<0.05, we have 838 DE genes between these groups, 406 are more expressed in the 
+treated samples or up-regulated and 432 are more expressed in the untreated 
+samples or down-regulated. Up and down regulation refers to the group you have 
+set as the control or reference group. In this case, we are comparing the 
+treated samples to the untreated samples so the untreated samples are our 
+reference group and we say genes are up or down regulated in comparison to this 
+group.
+
+In our walkthorugh of edgeR we use the same example dataset and found that 
+while controlling the adjusted p/FDR threshold at <0.05, we found no 
+differentially expressed genes between these groups. 
+
+Different analytical tools will often give you slightly different results and 
+edgeR may be better for projects which have specified genes of interest in mind 
+rather than exploratory projects since edgeR is much more strict with potential 
+false positive results. While DESeq2 may allow more false positives into your 
+significant results it also provides additional tools for evaluating their 
+veracity before following up with a lab test.
+
+As part of our results output from DESeq2 we also provide the s-values. 
+S-values provide an additional estimate of uncertainty by acting as a 
+likelihood of whether the genes identified as differentially expressed are 
+false positives. This helps our clients figure out if the DE genes they are 
+seeing are worth confirming biologically. An s-value can be interpreted as 
+s(genexyz)*100 = genexyz is x% likely to be a false positive finding. Here we 
+obtain the s-values by performing log fold change (LFC) shrinkage on the dds 
+object while specifying our comparison of interest and setting the s-values 
+argument to TRUE. Briefly, LFC shrinkage makes the differences in the genes 
+between groups comparable. Since genes can have a very small p-value even when 
+the LFC is very small, this scales all of the LFCs by their p-values while 
+preserving those truly large LFCs. We also use the apeglm estimator since it is 
+the best available as of writing this and allows us to compute s-values. This 
+is a much more complicated aspect of the analysis than we will cover here and 
+for more detail on LFC shrinkage and s-values, please see the DESeq2 
+documentation 
+[here](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/
+DESeq2.html).
+
+We check that the data frame was created successfully by using the informal 
+unit test of dimension with the expected number of rows and columns and telling 
+the program to stop if the file does not have these dimensions. After this runs 
+successfully we would typically export them as a .csv file for you.
+
+``` {r results, message = FALSE, echo = FALSE}
+
+LFC_dds <-as.data.frame(lfcShrink(dds, 
+                                  coef="condition_treated_vs_untreated", 
+                                  type = "apeglm", svalue = TRUE)) %>%
+  arrange(log2FoldChange)
+
+res_df <- as.data.frame(res) %>%
+  arrange(log2FoldChange) %>%
+  mutate(svals = LFC_dds$svalue) %>%
+  mutate(ID = as.factor(row.names(res))) %>%
+  arrange(padj)
+
+row.names(res_df) <- res_df$ID
+stopifnot(nrow(res_df) == 14599 & ncol(res_df) == 8)
+```
+
+### Visualizing {-}
+
+We now perform additional data visualizations. Typically we provide a PCA plot, 
+heat maps, and volcano plots. We would be happy to work with you to customize 
+these for publication. Please see our Data Visualization 
+[menu](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
+ataVisualizationMenu.pdf) for more options and examples from previous projects.
+
+For our heat maps, we typically show the mean normalized counts of the samples. 
+Next, we put the samples in the order of treated to untreated and select only 
+the 20 genes with the lowest adjusted p-values be displayed so that we can see 
+the gene names. It is possible to keep all DE genes on a heat map but after 20 
+it becomes nearly impossible to read each of the individual gene name and 
+depending on the number of DE genes, it can be difficult to see the differences 
+between groups with 100-200 genes on a plot setup this way. The first graph 
+shows 20 genes and the second graph shows 200 genes. 
+
+```{r visualize, echo= FALSE, fig.height=3.5, fig.width=3.5, message=FALSE}
+vst_df <- as.data.frame(assays(vst_dds))
+
+vst_df <- vst_df[c("treated1", "treated2", "treated3",
+                   "untreated1", "untreated2", "untreated3", "untreated4")]
+
+res_heat <- as.data.frame(res)
+sel_padj20 <- order(res_heat$padj, 
+                    decreasing = FALSE)[1:20]
+
+annotation <- as.data.frame(colData(dds)["condition"])
+
+pheatmap(vst_df[sel_padj20, ],
+         cluster_rows= FALSE,
+         show_rownames = TRUE,
+         cluster_cols = FALSE,
+         annotation_col = annotation,
+         width = 1)
+
+sel_padj200 <- order(res_heat$padj, decreasing = FALSE)[1:200]
+
+pheatmap(vst_df[sel_padj200, ],
+         cluster_rows= TRUE,
+         show_rownames = FALSE,
+         cluster_cols = TRUE,
+         annotation_col = annotation,
+         width = 1)
+
+```
+
+Here we see the differences in mean-normalized counts between the samples in 
+the treated vs untreated groups in the genes sorted by smallest adjusted 
+p-value. Please note that these are sorted for convenience but the gene at the 
+top of the list is no more significant than the gene at the bottom of the list. 
+As is the case with nominal p-values, a smaller adjusted p-value does not make 
+a gene more statistically significant than one with a larger adjusted p-value. 
+If the genes are below the threshold, they are all equally statistically 
+significantly differentially expressed. These are sorted for convenience but 
+the gene at the top of the list is no more significant than the gene at the 
+bottom of the list. 
+
+We also typically provide clients with an initial volcano plot created with the 
+EnhancedVolcano R library. Similar to the PCA plot and heat map, this is a 
+highly customizable graph and we would like to work with you to design graphs 
+which best tell the story of your results. 
+
+A volcano plot is technically a scatter plot where the x-axis has the log2 
+transformed fold changes between the compared samples and the y axis has the 
+local adjusted p-values for each gene, also called the q-value. Here we have 
+also labelled the genes with FDR < 0.1 as that is where we set our threshold 
+when we generated our results. The points in red are those which meet the 
+threshold for statistical significance with a q value  less than or equal to 
+0.1 and a log2 fold change of 1.0 or greater. Points in green are those with 
+only log2 fold changes >1.0 and those in blue have claques < 0.1. The points in 
+grey are non statistically significant by any measure. All of these parameters 
+can be adjusted based on your cutoffs and thresholds. 
+
+```{r volcano, echo= FALSE, fig.height=5, fig.width=5, message=FALSE}
+
+EnhancedVolcano(res,
+                lab = rownames(res),
+                x = "log2FoldChange",
+                y = "padj",
+                xlim = c(-6, 6),
+                title= NULL,
+                subtitle= "Log(2) Fold Change vs -log(10) q values",
+                FCcutoff = 1.0,
+                pLabellingCutoff = 0.05,
+                pCutoff = 0.05,
+                legendPosition = "bottom",
+                legend=c("NS", "Log2 fold-change", "adj P-value",
+                         "adj P-value & Log2 fold-change"))
+
+```
+
+There are many more functions and many more specifications to functions than 
+are used here in order to show a simplified example of one of the tools we use 
+for differential expression analysis. Obtaining specific, actionable, and 
+publication quality results from analysis requires a deeper understanding of 
+your specific data set and we would love the opportunity to discuss these 
+options with you.
+
+While we encourage clients to reach out prior to sequencing so that we can 
+collaborate to design the experiment to answer your specific questions, we look 
+forward to hearing from you at any stage of your RNA-seq project. Please find 
+our contact information available on our 
+[website](https://www.cores.emory.edu/eicc/about/index.html) and check out some 
+of the graphs we've made for previous clients 
+[here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
+ataVisualizationMenu.pdf).
+
+### Session information and References {-}
+
+```{r sessioninfo, message = FALSE, echo = FALSE}
+date()
+sessionInfo()
+citation("bookdown")
+citation("readr")
+citation("dplyr")
+citation("knitr")
+citation("ggplot2")
+citation("DESeq2")
+citation("vsn")
+citation("pheatmap")
+citation("EnhancedVolcano")
+```
+<!---- done ---->

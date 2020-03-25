@@ -7,20 +7,18 @@
 #Emory/EICC/Methods/RNASeqbulkMethods/DESeq2/Makefile
 #----------------------------------------------------
 #
-
 HERE := $(shell Rscript --vanilla -e 'write(here::here(), stdout())')
 
 .PHONY:	all clean
 
-all: output/DEGAnalysiswithDESeq2.pdf
+all: output/DESeq2.pdf
 
 clean:
 	
 					-rm -r output/*
 		
-output/DEGAnalysiswithDESeq2.pdf: \
-					src/DEGAnalysiswithDESeq2.Rmd
-			-rm src/DEGAnalysiswithDESeq2.pdf
+output/DESeq2.pdf: \
+					src/DESeq2.Rmd
 			Rscript --vanilla -e "rmarkdown::render('$<')"
-			mv src/DEGAnalysiswithDESeq2.pdf $@
+			mv src/DESeq2.pdf $@
 # done.
