@@ -12,15 +12,15 @@ HERE := $(shell Rscript --vanilla -e 'write(here::here(), stdout())')
 
 .PHONY:	all clean
 
-all: output/16sAnalysiswithphyloseq_LDM.pdf
+all: output/16s.pdf
 
 clean:
 	
 					-rm -r output/*
 		
-output/16sAnalysiswithphyloseq_LDM.pdf: \
-					src/16sAnalysiswithphyloseq_LDM.Rmd
-			-rm src/16sAnalysiswithphyloseq_LDM.pdf
+output/16s.pdf: \
+					src/16s.Rmd
+			-rm src/16s.pdf
 			Rscript --vanilla -e "rmarkdown::render('$<')"
-			mv src/16sAnalysiswithphyloseq_LDM.pdf $@
+			mv src/16s.pdf $@
 # done.
