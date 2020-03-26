@@ -1,5 +1,6 @@
 ---
-title: 'Power & Sample Size assessment for differential expression analysis of RNA-Seq experiments using PROPER'
+title: 'Power & Sample Size assessment for differential expression analysis of 
+RNA-Seq experiments using PROPER'
 author: "Jessica Randall"
 output:
   bookdown::pdf_document2:
@@ -9,37 +10,63 @@ output:
 link-citations: yes
 ---
 
-Briefly, PROspective Power Estimation for RNA-Seq (PROPER) simulates experimental conditions to assess adequete sample size and statistical power for differential expression (DE) analysis using two-group comparison. RNA-seq experimental designs require consideration of the desired False Discovery Rate (FDR), the choice of sequencing depth, and the procedure used to determine differential expression. PROPER accounts for all of these considerations and even provides pretty graphs to explain it.
+Briefly, PROspective Power Estimation for RNA-Seq (PROPER) simulates 
+experimental conditions to assess adequete sample size and statistical power 
+for differential expression (DE) analysis using two-group comparison. RNA-seq 
+experimental designs require consideration of the desired False Discovery Rate 
+(FDR), the choice of sequencing depth, and the procedure used to determine 
+differential expression. PROPER accounts for all of these considerations and 
+even provides pretty graphs to explain it.
 
-Linked is the [original 2014 paper](doi:10.1093/bioinformatics/btu640) from Wu and Wang introducing the concepts implemented in PROPER. 
+Linked is the [original 2014 paper](doi:10.1093/bioinformatics/btu640) from Wu 
+and Wang introducing the concepts implemented in PROPER. 
 
 ### Definition of terms {-}
 
 #### Unadjusted p values vs adjusted p-values/(FDR): {-} 
 
-In DE analysis, a single p-value tells you how likely it is that a single gene is differential expressed between at least two groups (ex: a control and a treatment group) due to some actual difference between the groups as opposed to random chance. False Discovery Rate (FDR) tells you how likely it is that all genes identified as DE are false positives. A FDR of 5% means that among all genes called DE, an average of 5% of those are truly not DE. DE genes are only considered significantly so if they meet the adjusted p value, not only the unadjusted p-value. FDRs for each individual gene are called q-values or local FDRs. 
+In DE analysis, a single p-value tells you how likely it is that a single gene 
+is differential expressed between at least two groups (ex: a control and a 
+treatment group) due to some actual difference between the groups as opposed to 
+random chance. False Discovery Rate (FDR) tells you how likely it is that all 
+genes identified as DE are false positives. A FDR of 5% means that among all 
+genes called DE, an average of 5% of those are truly not DE. DE genes are only 
+considered significantly so if they meet the adjusted p value, not only the 
+unadjusted p-value. FDRs for each individual gene are called q-values or local 
+FDRs. 
 
 ### Generating data {-}
 
-Our very first step is to load the libraries we'll need to assess the functions required for analysis and graphing. Please see [Bioconductor](http://bioconductor.org/) for information about initial installation and use of Bioconductor and its packages.
+Our very first step is to load the libraries we'll need to assess the functions 
+required for analysis and graphing. Please see 
+[Bioconductor](http://bioconductor.org/) for information about initial 
+installation and use of Bioconductor and its packages.
 
 Our scenario is based on the following simplified experimental conditions:
 
 * Assuming 5% of genes are DE
 
-The validity of this assumption depends on your specific experiment, this is just a guess for the sake of the example.
+The validity of this assumption depends on your specific experiment, this is 
+just a guess for the sake of the example.
 
 * Testing 24000 genes
 
-This is just a nice round number similar to the numbers of genes we typically see in our RNA-Seq projects at EICC.
+This is just a nice round number similar to the numbers of genes we typically 
+see in our RNA-Seq projects at EICC.
 
 * Using the Cheung database
 
-The Cheung database best simulates the inherent biological variation between unique, unrelated individuals. This will provide estimates of sample size assuming the greatest amount of biological variation. If your experiment has samples which are more similar to each other than unique, unrelated individuals, we would select a different database to better simulate the biological variation.
+The Cheung database best simulates the inherent biological variation between 
+unique, unrelated individuals. This will provide estimates of sample size 
+assuming the greatest amount of biological variation. If your experiment has 
+samples which are more similar to each other than unique, unrelated 
+individuals, we would select a different database to better simulate the 
+biological variation.
 
 * 50M read sequencing depth
 
-This is the sequencing depth we typically recommend but your mileage may vary depending on how different you expect your groups to be. 
+This is the sequencing depth we typically recommend but your mileage may vary 
+depending on how different you expect your groups to be. 
 
 ```{r gendata, message = FALSE, echo = FALSE}
 
@@ -55,9 +82,20 @@ ourscenario <- RNAseq.SimOptions.2grp(ngenes = 24000,
 
 ### DE Gene Detection {-}
 
-Next, we run the simulations to detect DE genes. We chose the minimum recommended 20 simulations. This is to balance the accuracy with the time this portion of the analysis takes. We have included the time stamp to show how long even this simplified example scenario can take at the minimum number of simulations. More simulations may lead to more accurate estimates with the tradeoff being that this step takes longer. This is something we can test on a by-project basis.
+Next, we run the simulations to detect DE genes. We chose the minimum 
+recommended 20 simulations. This is to balance the accuracy with the time this 
+portion of the analysis takes. We have included the time stamp to show how long 
+even this simplified example scenario can take at the minimum number of 
+simulations. More simulations may lead to more accurate estimates with the 
+tradeoff being that this step takes longer. This is something we can test on a 
+by-project basis.
 
-We have chosen to simulate power for samples of 3,5,7,and 10 samples per treatment group (i.e. 10 cases and 10 controls) using DESeq2 since this is the tool we use most commonly for DE gene analysis. If you would like a power and sample size assessment from EICC, the choice of simulated sample sizes and the choice of DE analysis package are ones we would tailor to your specific experiment.
+We have chosen to simulate power for samples of 3,5,7,and 10 samples per 
+treatment group (i.e. 10 cases and 10 controls) using DESeq2 since this is the 
+tool we use most commonly for DE gene analysis. If you would like a power and 
+sample size assessment from EICC, the choice of simulated sample sizes and the 
+choice of DE analysis package are ones we would tailor to your specific 
+experiment.
 
 ```{r, simulation, echo=TRUE, message = FALSE}
 
@@ -76,7 +114,10 @@ end_time - start_time
 
 ### Power Assessment {-}
 
-Here we parameterize our power analysis. The chosen parameters will vary by experiment and often include a certain amount of filtering of lowly expressed genes since this is a common step. If you do a power assessment with EICC we will discuss the appropriate parameters for your project.
+Here we parameterize our power analysis. The chosen parameters will vary by 
+experiment and often include a certain amount of filtering of lowly expressed 
+genes since this is a common step. If you do a power assessment with EICC we 
+will discuss the appropriate parameters for your project.
 
 ```{r assessment, message = FALSE}
 
@@ -92,16 +133,29 @@ power <- comparePower(simulations,
 summaryPower(power)
 ```
 
-Given the experimental conditions of our scenario and assumptions we made about the percentae of DE genes, we would need to have 5 samples per experimental condition for a total of 10 samples in order to accurately detect 80% of DE genes with a standardized log fold change of 1. 
+Given the experimental conditions of our scenario and assumptions we made about 
+the percentae of DE genes, we would need to have 5 samples per experimental 
+condition for a total of 10 samples in order to accurately detect 80% of DE 
+genes with a standardized log fold change of 1. 
 
 ###### Notes on sequencing depth
-Do we really need more people or is greater resolution (i.e. sequencing depth) the answer? This is something that PROPER can assess and a question EICC would be happy to discuss with you.
+Do we really need more people or is greater resolution (i.e. sequencing depth) 
+the answer? This is something that PROPER can assess and a question EICC would 
+be happy to discuss with you.
 
 ### Visualizing {-}
 
-PROPER provides us with many options for visualizing the results of our analysis with publication-ready graphs and straight forward interpretations. Graphs could include the power, the number of true and false discoveries we could expect to find, estimated FDR, and false positive rate given various sample sizes along with customized graphs for your specific project.
+PROPER provides us with many options for visualizing the results of our 
+analysis with publication-ready graphs and straight forward interpretations. 
+Graphs could include the power, the number of true and false discoveries we 
+could expect to find, estimated FDR, and false positive rate given various 
+sample sizes along with customized graphs for your specific project.
 
-Here is the power graph from our simplified example scenario. As the green line indicates, sample sizes of 5 samples (red line) reach over 80% power, the minimum standard for statistical practice, at higher mean count strata but sample sizes of 7 or 10 per group would likely be better to ensoure power was sufficiently high across all count strata.
+Here is the power graph from our simplified example scenario. As the green line 
+indicates, sample sizes of 5 samples (red line) reach over 80% power, the 
+minimum standard for statistical practice, at higher mean count strata but 
+sample sizes of 7 or 10 per group would likely be better to ensoure power was 
+sufficiently high across all count strata.
 
 ```{r visualize, echo=FALSE, fig.height=6, fig.width=6, message=FALSE}
 
@@ -109,7 +163,13 @@ plotPower(power)
 
 ```
 
-We look forward to working with you to assess the necessary sample size for your project. For a more specific application and interpretation of these or additional tools and visualizations for your own data, please find our contact information on our [website](https://www.cores.emory.edu/eicc/about/index.html) and examples of some previous graphs [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/DataVisualizationMenu.pdf)
+We look forward to working with you to assess the necessary sample size for 
+your project. For a more specific application and interpretation of these or 
+additional tools and visualizations for your own data, please find our contact 
+information on our [website](https://www.cores.emory.edu/eicc/about/index.html) 
+and examples of some previous graphs 
+[here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
+ataVisualizationMenu.pdf)
 
 ### Session information and References {-}
 
