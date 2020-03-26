@@ -1,0 +1,434 @@
+---
+title: 'RNA-seq Differential Expression (DE) Analysis Using baySeq'
+author: "Jessica Randall"
+output:
+  bookdown::pdf_document2:
+    fig_width: 5
+    latex_engine: xelatex
+    toc : false
+---
+Briefly, baySeq uses empirical Bayesian inference to determine the likelihood 
+that genes in compared samples are indeed DE genes. baySeq improve seeks to 
+improve accuracy in DE estimation over other popular packages by using the 
+underlying structure of the data itself. baySeq does show improved performance 
+in the case of more complex study designs (i.e. multiple group comparisons) and 
+in studies with large numbers of libraries compared to other popular packages. 
+Here we illustrate a simplified example of a comparison between a control and a 
+treatment group.
+
+Linked is the [original 
+paper](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-11
+-422) from Hardcastle introducing the concepts implemented in baySeq. 
+
+We will be using the [pasilla 
+package](https://www.bioconductor.org/packages/release/data/experiment/html/pasi
+lla.html) for our example data.
+
+baySeq has wide range of applications to genomic analyses. We strongly 
+encourage you to reach out to EICC with questions regarding options available 
+to you with baySeq. Check out some of the graphs from previous projects 
+[here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
+ataVisualizationMenu.pdf).
+
+### Definition of terms {-}
+
+#### Bayesian Statistics: {-}
+
+Learning from experience to make inferences about the relationship between our 
+variables of interest. While the null hypothesis in the frequentist approach 
+(i.e. the use of p values) says that "there is no relationship", the Bayesian 
+approach allows us to incorporate previous knowledge we may have about a 
+relationship into future research we want to do on it. The associated credible 
+interval (as compared to the confidence interval) tells us how likely it is 
+that a particular value of interest lies between the prior and posterior 
+estimates of that value. In our example we would interpret this as, given what 
+we know about genetic expression between our control and treatment groups, how 
+likely it is that a certain percentage of genes are DE genes?
+
+##### Prior probability 
+
+The information we have about our data before we see it. This could come from 
+what we know about similar experiments or we can estimate it from our data and 
+these options vary in their utility. In our example, this could refer to how 
+likely we think it is that a certain percentage of genes are DE between our 
+control and treatment groups.
+
+##### Posterior probability
+
+The results of incorproating our prior knowledge and our observed data. In our 
+case that means, given that our control and treatment samples have particular 
+genes with particular amounts of expression, how likely it is that a certain 
+percentage of genes between them are DE genes?
+
+For more information and the source for these definitions please see "A Gentle 
+Introduction to Bayesian Analysis" from Schoot, Kaplan, Denissen, Asendorpf, 
+Neyer, and Aken (Developmental Method, 2013) 
+[here](https://onlinelibrary.wiley.com/doi/full/10.1111/cdev.12169) 
+
+#### Unadjusted p values vs adjusted p-values/(FDR): {-} 
+
+In DE analysis, a single p-value tells you how likely it is that a single gene 
+is differential expressed between at least two groups (ex: a control and a 
+treatment group) due to some actual difference between the groups as opposed to 
+random chance. False Discovery Rate (FDR) tells you how likely it is that all 
+genes identified as DE are false positives. A FDR of 5% means that among all 
+genes called DE, an average of 5% of those are truly not DE. DE genes are only 
+considered significantly so if they meet the adjusted p value, not only the 
+unadjusted p-value. FDRs for each individual gene are called q-values or local 
+FDRs. 
+
+### Loading data {-}
+
+Our very first step is to load the libraries we'll need to assess the functions 
+required for analysis and graphing. Please see 
+[Bioconductor](http://bioconductor.org/) for information about initial 
+installation and use of Bioconductor and its packages. We also set the minimal 
+theme in gglot2 for all graphs to have the same aesthetic features by default.
+
+The pasilla experiment studied RNAi knockdown of Pasilla, the Drosophila 
+melanogaster ortholog of mammalian NOVA1 and NOVA2, on the transcriptome. Data 
+are provided by NCBI Gene Expression Omnibus under accession numbers GSM461176 
+to GSM461181.
+
+Here we will demonstrate importing the count matrix and sample data from the 
+pasilla package since we're using it as an example. Typically we will use the 
+here package to specify the path for the counts and sample data files in a list 
+of files to import and export from the task. 
+
+We're also going to specify that we'd like the row names of our sample data to 
+come from the first column, called "file" since this is where we've stored 
+which sample is which and finally we remove extra columns from our sample data 
+which we won't be using in our analysis.
+
+Please reach out to EICC if you would like to compare 3 or more groups as this 
+is a simplified example. It may also be the case you will need more than 6 
+samples per experimental group or that you may need to remove genes with 
+average counts greater than 5, 10, 15, or even 20 for sufficient statistical 
+power. Please see our PROPER walk-through for an example of our of power and 
+sample size analysis.
+
+```{r load libs and data, message = FALSE, echo = FALSE}
+
+pacman::p_load("rmarkdown","readr","here", 
+               "dplyr", "knitr", "tidyr", 
+               "baySeq","DESeq2", "vsn", "ggplot2",
+               "EnhancedVolcano", "pheatmap", "random", "tinytex")
+
+set.seed(seed= 22310)
+
+theme_set(theme_minimal())
+
+countdata <- as.matrix(read.csv(system.file("extdata", 
+                                            "pasilla_gene_counts.tsv",
+                                            package="pasilla",
+                                            mustWork=TRUE), sep = "\t", 
+                                row.names = "gene_id"))
+
+sampledata <- as.data.frame(read.csv(system.file("extdata",
+                                                 
+"pasilla_sample_annotation.csv",
+                                                 package="pasilla", 
+mustWork=TRUE), row.names = 1))
+
+sampledata <- sampledata[,c("condition","type")]
+
+```
+
+### Preparing for Analysis {-}
+
+In order to perform our pairwise comparison we need to specify some informaton 
+about our data. Replicates and Groups represent the labels for our replicates 
+(Control vs. Treatment) and the null (NDE) and alternative (DE) hypotheses. 
+
+The groups object specifies our hypothesis. In the null hypothesis of no 
+differential expression (NDE), if all of our samples are 1's, this means that 
+all of the samples belonging to the same group, there is no difference between 
+the treated and untreated samples. In the alternative hypothesis of 
+differential expression, (DE) 1's represent membership in a single group and 
+2's represent membership in a second group. This set of 4 1's and 3 2's says 
+that there exist two distinct patterns of expression in the control and 
+treatment groups.
+
+We also annotate all 13064 genes with a number to cross-reference with the list 
+of gene names and counts after analysis. Our final preparation step is to get 
+our library size. Sometimes you may already know this but we have inferred it 
+from the data.
+
+```{r create CD object, message = FALSE}
+
+groups<- list(
+  NDE = c("untreated","untreated","untreated","untreated","untreated",
+  "untreated", "untreated"),
+  DE = c("untreated","untreated","untreated","untreated","treated", 
+       "treated", "treated"))
+
+CD <- new("countData", 
+          data = countdata, 
+          replicates = sampledata$condition, 
+          groups = groups)
+
+libsizes(CD) <- getLibsizes(CD)
+
+CD@annotation <-data.frame(name = rownames(countdata))
+
+```
+
+### Determine Prior Probabilities {-}
+
+We determine the prior probabilities of DE from the count data. Recall that 
+this means we are incorporating some structure inherent in our data to inform 
+the likeliehood that there are DE genes between our two groups. 
+
+For our simplified example we have chosen to do 10000 bootstrap samples using 
+quasi-likelihood estimation.These parameters will vary by experiment and we 
+would tailor these to your specific project.The length of time that determining 
+the priors and posterior likelihoods will take depends on your computational 
+power, your sample size, the method of estimation, the number of genes, number 
+of samples, and the number of groups you are comparing.
+
+```{r priors, message = FALSE}
+
+if(require("parallel")) cl <- makeCluster(8) else cl <- NULL
+
+start_time <- Sys.time()
+
+CD <- getPriors.NB(CD, samplesize = 10000, estimation = "QL", cl = cl)
+
+end_time <- Sys.time()
+
+end_time - start_time
+
+```
+
+### Determine Posterior Likelihoods {-}
+
+Next, we determine the posterior likelihood, that is, we are using our prior 
+knowledge and looking at our existing data to estimate how likely is it that 
+there are DE genes between our two groups?
+
+We chose to use just 3 bootstrap estimates here in the interest of the accuracy 
+vs. time trade-off. We would assess this parameter based on your specific 
+experiment.
+
+```{r posterior, message = FALSE}
+
+start_time <- Sys.time()
+
+CD <- getLikelihoods(CD, bootStraps = 3, verbose = FALSE, cl = cl)
+
+end_time <- Sys.time()
+
+end_time - start_time
+
+```
+
+If we had any additional data to add about the samples that we wanted to 
+include in our analysis we would add it next but since this is a simplified 
+example, we are only comparing treated and control samples without taking into 
+account any additional information about them.
+
+At this point we generate our first exploratory visualization, the principal 
+components analysis plot. This will show us how your data cluster or how 
+similar each sample is to others of the same group. There are percentages along 
+the axes and the percentage on the x-axis tells us how much the differences 
+between the samples is explained by them being treated or untreated. 
+
+Since baySeq does not have a built-in function for PCA plots, we can import the 
+data into the file structure preferred by DESEq2 and use their built-in 
+function. Please note that we are only using this data structure to visualize 
+data from baySeq, we are not using DESeq's tests for differential expression. 
+For that, please see our DESeq2 walktrhough 
+[here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/R
+NASeqbulkMethods/DESeq2/DEGAnalysiswithDESeq2.pdf). As we do in that tutorial's 
+PCA plot, we first transform our data using the variance stabilizing 
+transformation available from the vsn library (Tibshirani 1988; Huber et al. 
+2003; Anders and Huber 2010). This is similar to using a log2 transformation 
+with normally distributed data with many very small values. VST adjust the data 
+such that if the means of the rows are small, as they often are in gene counts, 
+the variance will remain relatively constant across all all counts. Doing this 
+allows the user to cluster the samples into experimentally interesting groups 
+in graphs rather than seeing groups clustered by their variance. We then 
+typically save this as a data frame to export to clients. 
+
+We can use the same plotPCA function to obtain the coordinates for each sample 
+on the plot. This is helpful in identifying samples we would consider outliers 
+since we haven't labelled each sample on the graph. 
+
+```{r exploratory pca, fig.height=5, fig.width=5, echo = FALSE, message = FALSE}
+
+dds <- DESeqDataSetFromMatrix(countData = countdata,
+                              colData = sampledata,
+                              design = ~ condition)
+
+vst_dds <- vst(dds, blind=FALSE)
+
+pca_coords <- plotPCA(vst_dds, 
+                      intgroup=c("condition"), 
+                      returnData = TRUE)
+
+plotPCA(vst_dds, intgroup=c("condition"))
+
+```
+
+We would interpret this as the samples being pretty clearly by group and 
+interpret the percentage on the x-axis as 57% of the variability between these 
+samples is due to them being treated or untreated. The y-axis tells us how much 
+variability between these samples is due to other factors in our model or if we 
+have none, sources of variability we may not have accounted for like sex or 
+ethnicity which are often leading contributors of variability between samples 
+and should be accounted for in experimental design if you wish to control for 
+their effects. 
+
+In the lower left corner of the graph we see that two samples from the treated 
+and untreated groups are clustering. This may suggest that these two samples 
+are too similar to one another for us to distinguish between-group difference. 
+
+### Results {-}
+
+Here we have the list of top 10 genes which are most likely to be 
+differentially expressed at FDR controlled at 0.05. This cut-off may vary 
+anywhere from 0.01-0.2 and will depend on the individual experiment but should 
+be specified a priori. We can see that the very first gene, FBgn002511 is 
+significantly up regulated in the treated as compared to the untreated samples 
+whereas FBgn0039155 is significantly up regulated in the untreated samples as 
+compared to the treated samples. 
+
+FDR thresholds can also range from 0.05-0.2 and it is much better to have the 
+option to lower your threshold during analysis rather than have to increase it 
+because your study was not sufficiently powered to find anything but the most 
+extremely highly or lowly differentially expressed genes. Please reach out to 
+us at EICC if you would like assistance in planning your experimental design 
+for your RNAseq project and in setting appropriate FDR thresholds.
+
+Finally, we create a data frame sorted by adjusted FDR of the DE group. We 
+check that the data frame was created successfully by using the informal unit 
+test of dimension with the expected number of rows and columns and telling the 
+program to stop if the file does not have these dimensions. After this runs 
+successfully we typically export them as a .csv file for you.
+
+``` {r results_export, message = FALSE, echo = FALSE}
+
+results_df <- as.data.frame(topCounts(CD, group="DE", normaliseData=TRUE, 
+FDR=0.05)) %>%
+  arrange(FDR.DE)
+
+row.names(results_df) <- results_df$name
+stopifnot(nrow(results_df) == 250 & ncol(results_df) == 12)
+```
+
+### Visualizing {-}
+
+We now perform additional data visualizations. Typically we provide a PCA plot, 
+heat maps, and volcano plots. We would be happy to work with you to customize 
+these for publication. Please see our Data Visualization 
+[menu](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
+ataVisualizationMenu.pdf) for more options and examples from previous projects.
+
+Before we generate our heatmap in baySeq, we need to transform the count. In 
+this example we have decided to sort the DE genes by smallest adjusted p value 
+and only examine the top 20 DE genes. The number of DE genes you may want to 
+visualize is customizable based on your project with EICC.
+
+```{r visualize, echo=FALSE, fig.height=4, fig.width=4, message=FALSE}
+
+vst_df <- as.data.frame(assays(vst_dds))
+
+vst_df <- vst_df[c("treated1fb", "treated2fb", "treated3fb",
+                   "untreated1fb", "untreated2fb", "untreated3fb", 
+"untreated4fb")]
+
+res_heat <- as.data.frame(results_df)
+
+sel_padj20 <- order(res_heat$FDR.DE, 
+                    decreasing = FALSE)[1:20]
+
+annotation <- as.data.frame(colData(dds)["condition"])
+
+pheatmap(vst_df[sel_padj20, ],
+         cluster_rows= FALSE,
+         show_rownames = TRUE,
+         cluster_cols = FALSE,
+         annotation_col = annotation,
+         width = 1)
+
+sel_padj200 <- order(res_heat$FDR.DE, decreasing = FALSE)[1:200]
+
+pheatmap(vst_df[sel_padj200, ],
+         cluster_rows= TRUE,
+         show_rownames = FALSE,
+         cluster_cols = TRUE,
+         annotation_col = annotation,
+         width = 1)
+
+```
+
+Please note that these are sorted for convenience but the gene at the top of 
+the list is no more significant than the gene at the bottom of the list. As is 
+the case with nominal p-values, a smaller adjusted p-value does not make a gene 
+more statistically significant than one with a larger adjusted p-value. If the 
+genes are below the threshold, they are all equally statistically significantly 
+differential expressed. These are sorted for convenience but the gene at the 
+top of the list is no more significant than the gene at the bottom of the list. 
+
+When using edgeR, DESeq2, or other frequentist based packages, we also 
+typically provide clients with an initial volcano plot of the log(2) fold 
+changes by the adjusted p-values created with the EnhancedVolcano R library. 
+Similar to the PCA plot and heat map, volcano plots are highly customizable 
+graph and we would like to work with you to design graphs which best tell the 
+story of your results. 
+
+bayseq provides a built-in plotMA function to graph the mean normalized counts 
+and the log ratio of the Posterior Likelihoods of differential expression. This 
+shows us the distribution of the likelihoods given the counts of each gene. 
+Blue circles indicate genes not determined to be differentially expressed while 
+orange genes indicate those which are differentially expressed at the FDR 
+threshold of 0.05. From this graph we see that as expected, most genes are not 
+differentially expressed and those genes which are, have all levels of counts. 
+This graph is more of a quality control check on the analysis than something we 
+would suggest for a publication.
+
+```{r plotma, echo= FALSE, fig.height=5, fig.width=5, message=FALSE}
+
+plotMA.CD(CD, 
+          samplesA = 1:4, samplesB = 5:7, 
+          col = c(rep("orange", 100), rep("darkblue", 900)),
+          xlab= "Mean Normalized counts",
+          ylab = "Log ratio of Posterior Likelihoods")
+
+
+```
+
+There are many more functions and many more specifications to functions than 
+are used here in order to show a simplified example of one of the tools we use 
+for differential expression analysis. Obtaining specific, actionable, and 
+publication quality results from analysis requires a deeper understanding of 
+your specific data set and we would love the opportunity to discuss these 
+options with you.
+
+While we encourage clients to reach out prior to sequencing so that we can 
+collaborate to design the experiment to answer your specific questions, we look 
+forward to hearing from you at any stage of your RNA-seq project. Please find 
+our contact information available on our 
+[website](https://www.cores.emory.edu/eicc/about/index.html) and check out some 
+of the graphs we've made for previous clients 
+[here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
+ataVisualizationMenu.pdf).
+
+### Session information and References {-}
+
+```{r sessioninfo, message = FALSE, echo = FALSE}
+if(!is.null(cl)) stopCluster(cl)
+date()
+sessionInfo()
+citation("bookdown")
+citation("readr")
+citation("abind")
+citation("tidyr")
+citation("dplyr")
+citation("knitr")
+citation("tidyr")
+citation("ggplot2")
+citation("baySeq")
+citation("EnhancedVolcano")
+```
+<!---- done ---->

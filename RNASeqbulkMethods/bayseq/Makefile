@@ -12,15 +12,15 @@ HERE := $(shell Rscript --vanilla -e 'write(here::here(), stdout())')
 
 .PHONY:	all clean
 
-all: output/DEGAnalysiswithbayseq.pdf
+all: output/bayseq.pdf
 
 clean:
 	
 					-rm -r output/*
 		
-output/DEGAnalysiswithbayseq.pdf: \
-					src/DEGAnalysiswithbayseq.Rmd
-			-rm src/DEGAnalysiswithbayseq.pdf
+output/bayseq.pdf: \
+					src/bayseq.Rmd
+			-rm src/bayseq.pdf
 			Rscript --vanilla -e "rmarkdown::render('$<')"
-			mv src/DEGAnalysiswithbayseq.pdf $@
+			mv src/bayseq.pdf $@
 # done.
