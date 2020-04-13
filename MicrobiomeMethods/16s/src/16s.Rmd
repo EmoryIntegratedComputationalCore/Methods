@@ -77,7 +77,7 @@ We will be using the Global Patterns dataset for this walk through but
 typically we would use the .qza files we obtain from QIIME2 and the 
 qza_to_phyloseq function in phyloseq to import the data as a phyloseq object. 
 
-```{r load packages, message=FALSE}
+```{r load packages, message=FALSE, warning=FALSE}
 
 pacman::p_load("knitr", "devtools","phyloseq","tidyverse",
                "qiime2R","reshape2", "xml2",
