@@ -19,7 +19,7 @@ sizes often found in these types of projects and the potential effects of
 outlier proteins or samples on estimates of variance within and between groups. 
 One protein or one sample could have the potential to skew results but the 
 empirical Bayes test moderates these effects resulting in improved 
-sensitivity and specificty over popular tools like Perseus.
+sensitivity and specificity over popular tools like Perseus.
 
 Linked is the [original 2018 Proteus 
 paper](https://doi.org/10.1101/416511) from Gierlinski, Gastaldello, and Barton
@@ -39,7 +39,7 @@ Su, Jansz, Chen, Leong, Blewitt, Asselin-Labat, Smyth, and Ritchie describing
 the eBayes function also implemented below.
 
 You may recognize some of the names of the authors on limma papers as authors on 
-related tools like edgeR for differential expression of RNASeq data and GOSeq
+related tools like edgeR for differential expression of RNA-Seq data and GOSeq
 specifically for GO term analysis. 
 
 We will be using example data from the 
@@ -65,7 +65,7 @@ small sample sizes often found in these types of projects and the potential
 effects of outlier proteins or samples on estimates of variance within and between 
 groups. One protein or one sample has the potential to skew results but the 
 empirical Bayes test moderates these effects resulting in improved 
-sensitivity and specificty over popular tools like Perseus.
+sensitivity and specificity over popular tools like Perseus.
 
 Compared to Perseus it has been our experience that Proteus is less stringent in 
 its calling of proteins as significantly DE. If your study is exploratory and 
@@ -185,10 +185,10 @@ prodat_ann <- annotateProteins(prodat, ann_id)
 
 ### Exploratory Visualizations {-}
 
-To plot the Pearson coorelations of each sample compared to other samples in the
+To plot the Pearson correlations of each sample compared to other samples in the
 dataset we use a distance matrix. Here we have customized the plotDM function
 in proteus to use a preferred color scheme and increase the font size and called 
-it plotDM_custom. These are small cosmetic changes we can accomodate if you have
+it plotDM_custom. These are small cosmetic changes we can accommodate if you have
 different preferences in color scheme, titles, or other labels.
 
 ```{r distmat, message=FALSE, echo = FALSE}
@@ -487,7 +487,7 @@ Rectangular Text Data. R package version 1.3.1.
 https://CRAN.R-project.org/package=readr
 
 Kevin Blighe, Sharmila Rana and Myles Lewis (2020). EnhancedVolcano:
-Publication-ready volcano plots with enhanced colouring and labeling.
+Publication-ready volcano plots with enhanced coloring and labeling.
 R package version 1.6.0.https://github.com/kevinblighe/EnhancedVolcano
 
 Marek Gierlinski (2020). proteus: Downstream analysis of the MaxQuant

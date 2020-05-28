@@ -16,6 +16,11 @@ A demonstraton of the R/Bioconductor package edgeR to perform differential expre
 ## [16s analysis with phyloseq and LDM](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/MicrobiomeMethods/16s/output/16s.pdf)
 A demonstration of the R packages phyloseq and LDM. phyloseq takes in data from data processing programs like QIIME, mothur, and Pyrotagger. While QIIME2 offers richness estimates and other exploratory data analysis (ex: alpha and beta diversity metrices) we believe that phyloseq in combination with ggplot2 offers greater flexibility for generating customizable data visualizations. Once exploratory data analysis in phyloseq is complete, we use the LDM package to perform statistical analyses. LDM takes in a table of operational taxonomic units (OTUs) or amplicon sequence variants (ASVs) along with a table of data about the samples (i.e. covariates) and uses a linear decomposition model to associate experimental conditions and covariates of interest with microbial abundance.
 
+# Proteomics Methods
+
+## [Proteus](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/ProteomicsMethods/Proteus/output/Proteus.pdf)
+A demonstration of the R package Proteus to perform differential expression analysis from MaxQuant's proteinGroups file. Proteus primarily uses the limma empirical Bayesian test to determine differential expression between comparison groups.
+
 # Miscellaneous
 
 ## [Power & Sample Size Assesment for RNA-Seq with PROPER](https://github.com/EmoryIntegratedComputationalCore/Methods/tree/master/Miscellaneous/PROPER/output/PROPER.pdf)
