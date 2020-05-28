@@ -42,18 +42,6 @@ ataVisualizationMenu.pdf).
 
 ### Definition of terms {-}
 
-#### Quasi-likelihood F Test: {-}
-
-Unadjusted p values vs adjusted p values/(FDR): In DE analysis, a single 
-p-value tells you how likely it is that a single gene is differentially 
-expressed between at least two groups (ex: a control and a treatment group) due 
-to some actual difference between the groups as opposed to random chance. False 
-Discovery Rate (FDR) tells you how likely it is that all genes identified as DE 
-are false positives. A FDR of 5% means that among all genes called DE, an 
-average of 5% of those are truly not DE.DE genes are only considered 
-significantly so if they meet the adjusted p value, not only the unadjusted p 
-value. 
-
 Compared to DESeq2 it has been our experience that edgeR is more stringent in 
 its calling of genes as significantly DE. If your study is exploratory and are 
 not sure which or how many DE genes you are expecting to find in your 
