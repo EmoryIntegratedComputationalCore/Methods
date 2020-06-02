@@ -15,12 +15,11 @@ HERE := $(shell Rscript --vanilla -e 'write(here::here(), stdout())')
 all: output/16s.pdf
 
 clean:
-	
-					-rm -r output/*
+	-rm -r output/*
 		
 output/16s.pdf: \
 					src/16s.Rmd
-			-rm src/16s.pdf
+					-rm src/16s.pdf
 			Rscript --vanilla -e "rmarkdown::render('$<')"
 			mv src/16s.pdf $@
 # done.

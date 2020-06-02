@@ -1,0 +1,519 @@
+---
+title: 'Differential Expression (DE) Analysis with Proteus'
+author: "Jessica Randall"
+output:
+  bookdown::pdf_document2:
+    keep_tex: true
+    fig_width: 6
+    latex_engine: xelatex
+---
+
+Briefly, Proteus provides users with tools to build both 2-d and 3-D
+interactive plots and other summaries of their proteomics output
+(proteinGroups.txt) from MaxQuant and implements the linear models and empirical 
+Bayes estimation methods from limma (Linear Models for Microarray Data) to determine 
+differential expression between comparisons of two or more groups. 
+
+These methods work for protemics data because they account for small sample 
+sizes often found in these types of projects and the potential effects of
+outlier proteins or samples on estimates of variance within and between groups. 
+One protein or one sample could have the potential to skew results but the 
+empirical Bayes test moderates these effects resulting in improved 
+sensitivity and specificity over popular tools like Perseus.
+
+Linked is the [original 2018 Proteus 
+paper](https://doi.org/10.1101/416511) from Gierlinski, Gastaldello, and Barton
+introducing the concepts implemented in Proteus. 
+
+Here is the [original link to 
+the 2015 limma paper](https://doi.org/10.1093/nar/gkv007) from Ritchie, 
+Phipson, Wu, Hu, Law, Shi, and Smyth. There are also several additional
+papers describing methods implemented in limma which include the 
+[a 2016 paper](https://arxiv.org/pdf/1602.08678.pdf)
+describing the differential expression methodologies from Phipson, Lee, Majewski,
+Alexander, and Smyth,
+[a 2014 article](https://pubmed.ncbi.nlm.nih.gov/24485249/) describing 
+methods behind the lmFit function described below  from Law, Chen, Shi, and Smyth, 
+and [a 2015 article](https://pubmed.ncbi.nlm.nih.gov/25925576/) from Liu, Holik, 
+Su, Jansz, Chen, Leong, Blewitt, Asselin-Labat, Smyth, and Ritchie describing 
+the eBayes function also implemented below.
+
+You may recognize some of the names of the authors on limma papers as authors on 
+related tools like edgeR for differential expression of RNA-Seq data and GOSeq
+specifically for GO term analysis. 
+
+We will be using example data from the 
+[Proteus Label Free](https://github.com/bartongroup/proteusLabelFree/tree/master/inst/extdata) package.
+These data come from an unpublished project by the Barton Group examining the 
+proteomics of yeast with 2 experimental groups with seven replicates in each group. 
+
+Proteus has wide range of capabilities for proteomics data. Our simplified 
+example describes how to read in data from the protein groups file from MaxQuant, 
+and perform and visualize differentially expressed proteins with a volcano plot. 
+We strongly encourage you to reach out to EICC with  questions regarding more
+advanced options available to you with Proteus. 
+Check out some of the graphs from previous projects 
+[here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
+ataVisualizationMenu.pdf).
+
+### Definition of terms {-}
+
+#### Empirical Bayes test: {-}
+
+The empirical Bayes test works well for protemics data because it accounts for 
+small sample sizes often found in these types of projects and the potential 
+effects of outlier proteins or samples on estimates of variance within and between 
+groups. One protein or one sample has the potential to skew results but the 
+empirical Bayes test moderates these effects resulting in improved 
+sensitivity and specificity over popular tools like Perseus.
+
+Compared to Perseus it has been our experience that Proteus is less stringent in 
+its calling of proteins as significantly DE. If your study is exploratory and 
+you are not sure which or how many DE proteins you are expecting to find, 
+Proteus may be better suited to your project goals.
+
+#### Imputation {-}
+
+One distinct feature of Proteus is its implementation of imputation methods. 
+Since proteomics data often has a high proportion of missing 
+values, the choice of how to impute those values becomes crucial to accurate 
+estimation of differences within and between groups of samples. Proteus estimates
+missing values by using values in the existing data rather than drawing
+random values from the normal distribution as is implemented in Perseus.
+
+#### Unadjusted p values vs adjusted p-values/(FDR): {-} 
+
+In DE analysis, a single p-value tells you how likely it is that a single protein 
+is differential expressed between at least two groups (ex: a control and a 
+treatment group) due to some actual difference between the groups as opposed to 
+random chance. False Discovery Rate (FDR) tells you how likely it is that all 
+proteins identified as DE are false positives. A FDR of 5% means that among all 
+proteins called DE, an average of 5% of those are truly not DE. DE proteins are 
+only considered significantly so if they meet the adjusted p value, not only the 
+unadjusted p-value. FDRs for each individual protein are called q-values or 
+local FDRs. 
+
+### Loading data {-}
+
+Our very first step is to load the libraries required for analysis and graphing.
+Please see [Bioconductor](http://bioconductor.org/) for information about initial 
+installation and use of Bioconductor and its packages. We also set the minimal 
+theme in R's gglot2 package for all graphs to have the same aesthetic features 
+by default.
+
+Here we will demonstrate importing the protein group data from the 
+[proteusLabelFree](https://github.com/bartongroup/proteusLabelFree/tree/master/inst/extdata) 
+package.
+
+We also use the [here](https://github.com/jennybc/here_here) package to specify 
+relative file paths rather than absolute file paths, the 
+[janitor](https://github.com/sfirke/janitor) package for cleaning up data 
+formatting, the [RColorBrewer](https://www.rdocumentation.org/packages/RColorBrewer/versions/1.1-2) 
+package for custom color palettes, and prefer a [tidy](https://www.tidyverse.org) 
+syntax from the tidyverse R package collective.
+
+Please reach out to EICC if you would like to compare 3 or more groups as this 
+is a simplified example. It may also be the case you will need more than 7
+samples per experimental group or that you may need to adjust filtering criteria.
+Please see our PROPER walk-through for an example of our of power and 
+sample size analysis for RNASeq data as an example of considerations we take 
+into account for those types of experiments.
+
+```{r load libs and data, message = FALSE}
+
+pacman::p_load("readr", "here", "knitr", "janitor",
+               "tidyverse", "proteus", "EnhancedVolcano")
+
+files <- list(metadata = 
+                here("ProteomicsMethods/Proteus/input/metadata.txt"), 
+              pgroups = 
+                here("ProteomicsMethods/Proteus/input/proteinGroups.txt"))
+
+meta <- read_tsv(files$metadata)
+
+# import data and filter out reversed and contaminant proteins
+prodat <- readProteinGroups(files$pgroups, meta, 
+                            measure.cols = 
+                              setNames(paste("Intensity",
+                                             meta$experiment), 
+                                       meta$experiment))
+
+```
+
+### Annotation {-}
+
+Annotate with UniProt being careful to choose the right delimiter to parse the 
+protein names correctly. Since We're using proteus example data, this was taken 
+directly from the proteus vignette but in cases where names are delimited with
+other characters like semicolons or commas, this process will look a bit different.
+Choosing how to parse the names of your list of proteins will take some trial and 
+error. Once we have a list of protein names we can remove duplicates that result
+from names changing overtime as discoveries are made in the field.
+
+It may also be the case that protein IDs are too long to be legible on your
+graphs later on so you have the option of annotating with gene names at this 
+step instead.
+
+Getting annotation from UniProt with fetchUniProt can take a long time depending 
+on the size of your dataset and your computing speed but it will tell you when 
+it's done. 
+
+```{r annotation, message = FALSE}
+
+luni <- lapply(as.character(prodat$proteins), function(prot) {
+ if(grepl("sp\\|", prot)) {
+   uniprot <- unlist(strsplit(prot, "|", fixed=TRUE))[2]
+   c(prot, uniprot)
+ }
+})
+ids <- as.data.frame(do.call(rbind, luni))
+names(ids) <- c("protein", "uniprot")
+
+annotations <- fetchFromUniProt(ids$uniprot, verbose=TRUE)
+
+# remove duplicate IDs
+
+ann_id <- merge(ids, annotations, by.x="uniprot", by.y="id")
+ann_id<- unique(ann_id)
+
+# annotate proteus object with protein IDs
+
+prodat_ann <- annotateProteins(prodat, ann_id)
+
+```
+
+
+### Exploratory Visualizations {-}
+
+To plot the Pearson correlations of each sample compared to other samples in the
+dataset we use a distance matrix. Here we have customized the plotDM function
+in proteus to use a preferred color scheme and increase the font size and called 
+it plotDM_custom. These are small cosmetic changes we can accommodate if you have
+different preferences in color scheme, titles, or other labels.
+
+```{r distmat, message=FALSE, echo = FALSE}
+
+plotDM_custom <- function (pdat, distance = c("correlation"), 
+                           text.size = 10) 
+{
+  if (!is(pdat, "proteusData")) 
+    stop("Input data must be of class proteusData.")
+  distance <- match.arg(distance)
+  corr.mat <- cor(pdat$tab, use = "complete.obs")
+  m <- reshape2::melt(corr.mat, varnames = c("Sample1", 
+                                             "Sample2"))
+  m$Sample1 <- factor(m$Sample1, levels = pdat$metadata$sample)
+  m$Sample2 <- factor(m$Sample2, levels = pdat$metadata$sample)
+  ggplot(m, aes_(x = ~Sample1, y = ~Sample2)) + 
+    geom_tile(aes_(fill = ~value)) + 
+    scale_color_distiller(palette = "RdBu") + 
+    scale_fill_distiller(palette = "RdBu") +
+    theme(axis.text.x = element_text(angle = 90, 
+                                     hjust = 1, 
+                                     vjust = 0.5, 
+                                     size = text.size), 
+          axis.text.y = element_text(size = text.size), 
+          axis.title = element_text(size = text.size)) + 
+    labs(x = "Sample", y = "Sample", fill = "Correlation", 
+         title = "Distance Matrix")
+}
+
+```
+
+
+```{r plotdist, message = FALSE}
+
+plotDM_custom(prodat_ann)
+
+```
+
+This graph tells us how correlated each sample is with other samples. The darker
+red, the more correlated and the darker blue, the less correlated. Samples will
+always be most highly correlated with themselves (darkest red) and we would
+expect to see higher correlations within experimental groups than we would 
+expect to see between them. This is not the case in this example data set but
+is more clearly visible in very clean data with truly biologically different
+groups.
+
+If we had any additional data to add about the samples that we wanted to 
+include in our analysis we would add it next but since this is a simplified 
+example, we are only comparing treated and control samples without taking into 
+account any additional information about them.
+
+At this point we generate our second exploratory visualization, the principal 
+components analysis (or, PCA) plot. This will show us how your data cluster or 
+how similar each sample is to others of the same group.
+
+Here we have also customized the plotPCA function in proteus to use a preferred 
+color scheme, add a title, change legend labels, and increase the font size, we
+call it plotPCA_custom.
+
+```{r pca function , fig.height=6, fig.width=6, echo = FALSE, message = FALSE}
+
+plotPCA_custom <- function (pdat, with.legend = TRUE, point.size = 2, 
+                            text.size = 12, label.size = 4, 
+                            legend.text.size = 12, 
+                            title = "Variability in Abundance Explained by Groupings") 
+{
+  if (!is(pdat, "proteusData")) 
+    stop("Input data must be of class proteusData.")
+  pca <- prcomp(t(na.omit(log10(pdat$tab))), 
+                scale. = TRUE, 
+                center = TRUE)
+  p <- data.frame(x = pca$x[, 1], y = pca$x[, 2], 
+                  condition = pdat$metadata$condition, 
+                  sample = pdat$metadata$sample)
+  var.perc <- 100 * (pca$sdev)^2/sum((pca$sdev)^2)
+  pca1 <- sprintf("PCA1 (%5.1f%%)", var.perc[1])
+  pca2 <- sprintf("PCA2 (%5.1f%%)", var.perc[2])
+  g <- ggplot(p, aes_(x = ~x, y = ~y, label = ~sample)) + 
+    theme_minimal() +
+    theme(legend.title = element_text(size = legend.text.size), 
+          legend.text = element_text(size = legend.text.size)) + 
+    coord_cartesian(expand = TRUE) + 
+    geom_point(aes_(colour = ~condition), size = point.size) + 
+    ggrepel::geom_text_repel(size = label.size) + 
+    scale_color_brewer(palette = "Set1") +
+    scale_fill_brewer(palette = "Set1") +
+    theme(text = element_text(size = text.size)) + 
+    labs(x = pca1, y = pca2, title = title)
+  if (!with.legend) 
+    g <- g + theme(legend.position = "none")
+  g
+}
+
+
+```
+
+
+```{r pca plot , fig.height=6, fig.width=6, echo = FALSE, message = FALSE}
+
+plotPCA_custom(prodat_ann)
+
+```
+
+This plot shows that our samples are somewhat clustering together and we would
+interpret the x-axis as saying that 43% of the variability between these samples is
+due to some true difference in expression between the groups and a similarity
+in expression between samples of the same group. 
+
+The y-axis tells us how much variability between these samples is due to 
+other factors in our model or if we have none, sources of variability we may not 
+have accounted for like sex or ethnicity which are often leading contributors of 
+variability between samples and should be accounted for in experimental design 
+if you wish to control for their effects. 
+
+### Normalizing data {-}
+
+There are a number of reasons we may want to normalize data in Proteus and the 
+normalizeData functions offer the options to normalize by the median or by 
+quantiles as desired. The default method in the function is median normalization 
+rather than mean normalization to mitigate the effects of very small or very
+large values. This means that median intensity in every sample will be the same.
+
+We normalize using this method because we assume the data we have collected are 
+a sample from a population of possible protein expression values which follow 
+a normal or bell-curve shaped distribution around the median. We normalize to 
+make our data better match the shape of this curve rather than findings being 
+driven by very high or very low values.
+
+We can see the effects of median normalization in the two graphs below, the 
+first representing the log10 transformed values of the un-normalized data and 
+the second showing log10 transformed values of the median-normalized data.
+
+
+```{r normal, message = FALSE, echo = FALSE}
+
+prodat_norm <- normalizeData(prodat_ann)
+# color palette of choice, chose RdBu2 from ColorBrewer
+RdBu2 <- c("#ca0020", "#0571b0")
+
+plotSampleDistributions(prodat_ann, 
+                        title="Not normalized", 
+                        fill="condition", 
+                        method="box", 
+                        palette = RdBu2)
+
+plotSampleDistributions(prodat_norm, 
+                        title="Normalized", 
+                        fill="condition", 
+                        method="box", 
+                        palette = RdBu2)
+
+
+```
+
+
+### Differential Expression Setup and Testing {-}
+
+At this point we have prepared all of the data to be input into our linear model. 
+In this simplified example we are only making 1 pairwise comparison between two
+groups. While Proteus is designed to handle these types of analyses, the authors
+advise that for more complicated study designs than this, that 
+[limma](http://bioconductor.org/packages/release/bioc/html/limma.html) be used
+directly. 
+
+Please contact EICC if would like to discuss your experimental goals so we can 
+assist you in choosing the appropriate analysis tool.
+
+Recall that the hypothesis we are testing is that there is no difference in 
+protein expression between the treatment and control samples. Here we
+use the limmaDE function in Proteus to examine that hypothesis with our FDR
+set at 0.05. Below are the 10 proteins with the lowest FDRs in our results.
+
+``` {r test, message = FALSE, warning = FALSE}
+
+res <- limmaDE(prodat_norm, sig.level=0.05)
+
+```
+
+
+### Results {-}
+
+``` {r results_view, message = FALSE, echo = FALSE}
+
+# save all results sorted by smallest FDR
+res <- res %>%
+  clean_names() %>%
+  arrange(adj_p_val)
+
+# filter for only significantly differentially expressed proteins at FDR < 0.05
+sig_res <- res %>%
+  filter(adj_p_val < 0.05)
+
+# count the number of DE proteins 
+n_de_proteins <- nrow(sig_res)
+
+up_reg <- sig_res %>%
+  filter(log_fc > 0.000)
+
+n_up_reg <- nrow(up_reg)
+
+down_reg <- sig_res %>%
+  filter(log_fc < 0.000)
+
+n_down_reg <- nrow(down_reg)
+
+# show 10 proteins with lowest FDR
+head(sig_res$protein, 10)
+
+```
+
+In this example, while controlling the adjusted p/FDR threshold at <0.05, we have
+`r n_de_proteins` DE proteins between these groups, `r n_up_reg` are more 
+expressed in the A samples or up-regulated and `r n_down_reg` are more 
+expressed in the B samples or down-regulated.Up and down regulation refers to 
+the group you have set as the control or reference group. In this case, we are 
+comparing the B samples to the A samples so the B samples are our reference 
+group.
+
+FDR thresholds can also range from 0.05-0.2 and it is much better to have the 
+option to lower your threshold during analysis rather than have to increase it 
+because your study was not sufficiently powered to find anything but the most 
+extremely highly or lowly differentially expressed proteins. In proteomics
+experiments it is also common to report the nominal p-value instead of the FDR. 
+Please reach out to EICC if you would like assistance in planning your 
+experimental design for your proteomics project and in setting appropriate 
+p-value or FDR thresholds.
+
+### Visualizing Results {-}
+
+We now generate a common data visualization, a volcano plot.
+Typically we provide a distance matrix, PCA plot, and volcano plots with 
+proteomics projects but we would be happy to work with you to customize these and
+additional visualizations for publication. 
+Please see our Data Visualization 
+[menu](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
+ataVisualizationMenu.pdf) for examples from previous projects.
+
+A volcano plot is a scatter plot where the x-axis has the log2 transformed 
+fold changes between the compared samples and the y axis has the nominal or
+adjusted p-values for each protein. Here we have also labelled the proteins 
+with FDR < 0.05 as that is the threshold we set for our results. 
+
+Using the EnhancedVolcano package with a custom color palette from ColorBrewer2, 
+the points in red are those which meet the threshold for statistical 
+significance with an adjusted p value less than or equal to 0.05 and a log2 fold 
+change of 1.0 or greater. Points in dark blue are those with only log2 fold 
+changes >1.0 and those in light blue are not statistically significant nor have 
+a log2 fold change > 1.0. All of these parameters can be adjusted based on 
+cutoffs and thresholds relevant to your data.
+
+```{r volcano, echo=FALSE, fig.height=6, fig.width=6, message=FALSE}
+
+# color palette of choice, chose RdBu4 from ColorBrewer
+# can change and customize color palette in loop from here
+RdBu4 <- c("#92c5de", "#0571b0", "#f4a582", "#ca0020")
+palette = RdBu4
+
+EnhancedVolcano(res,
+                lab = res$protein,
+                pCutoff = 1e-2,
+                FCcutoff = 1.0,
+                x = 'log_fc',
+                y = 'adj_p_val',
+                xlim = c(min(res$log_fc, na.rm=TRUE) - 1,
+                         max(res$log_fc, na.rm=TRUE) + 1), 
+                col = palette,
+                title = "A-B",
+                subtitle = "Log2 fold-change vs adjusted p-value", 
+                legendPosition = "bottom",
+                legendLabels = c('NS', expression(Log[2]~FC > 1.0),
+                                 ' adj p-value < 0.01', 
+                                 expression(adjp-value < 0.05 ~and~log[2]~FC > 1.0)))
+
+```
+
+There are many more capabilities and functions available in Proteus than are 
+used here in order to show a simplified example of one of the tools we use 
+for differential expression analysis for proteomics data. Obtaining specific, 
+actionable, and publication quality results from analysis requires a deeper 
+understanding of your specific data set and we would love the opportunity to 
+discuss these options with you.
+
+While we encourage clients to reach out prior to sequencing so that we can 
+collaborate to design the experiment to answer your specific questions, we look 
+forward to hearing from you at any stage of your proteomics project. Please find 
+our contact information available on our 
+[website](https://www.cores.emory.edu/eicc/about/index.html) and check out some 
+of the graphs we've made for previous clients 
+[here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
+ataVisualizationMenu.pdf).
+
+### References and Session information {-}
+
+Hadley Wickham, Jim Hester and Romain Francois (2018). readr: Read
+Rectangular Text Data. R package version 1.3.1.
+https://CRAN.R-project.org/package=readr
+
+Kevin Blighe, Sharmila Rana and Myles Lewis (2020). EnhancedVolcano:
+Publication-ready volcano plots with enhanced coloring and labeling.
+R package version 1.6.0.https://github.com/kevinblighe/EnhancedVolcano
+
+Marek Gierlinski (2020). proteus: Downstream analysis of the MaxQuant
+output. R package version 0.2.14.https://github.com/bartongroup/Proteus
+
+Wickham et al., (2019). Welcome to the tidyverse. Journal of Open
+Source Software, 4(43), 1686, https://doi.org/10.21105/joss.01686
+
+Yihui Xie (2014) knitr: A Comprehensive Tool for Reproducible
+Research in R. In Victoria Stodden, Friedrich Leisch and Roger D.
+Peng, editors, Implementing Reproducible Computational Research.
+Chapman and Hall/CRC. ISBN 978-1466561595
+
+Yihui Xie (2015) Dynamic Documents with R and knitr. 2nd edition.
+Chapman and Hall/CRC. ISBN 978-1498716963
+
+Yihui Xie (2016). bookdown: Authoring Books and Technical Documents
+with R Markdown. Chapman and Hall/CRC. ISBN 978-1138700109
+
+Yihui Xie (2020). knitr: A General-Purpose Package for Dynamic Report
+Generation in R. R package version 1.28.
+
+
+```{r sessioninfo, message = FALSE, echo = FALSE}
+date()
+sessionInfo()
+```
+
+<!---- done ---->

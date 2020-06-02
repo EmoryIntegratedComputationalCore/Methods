@@ -1,0 +1,14 @@
+experiment	measure	sample	condition	replicate
+A-1	Intensity	A-1	A	1
+A-2	Intensity	A-2	A	2
+A-3	Intensity	A-3	A	3
+A-4	Intensity	A-4	A	4
+A-5	Intensity	A-5	A	5
+A-6	Intensity	A-6	A	6
+A-7	Intensity	A-7	A	7
+B-1	Intensity	B-1	B	1
+B-2	Intensity	B-2	B	2
+B-3	Intensity	B-3	B	3
+B-4	Intensity	B-4	B	4
+B-5	Intensity	B-5	B	5
+B-6	Intensity	B-6	B	6
