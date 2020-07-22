@@ -1,10 +1,11 @@
 ---
 title: '16s Microbiome Analysis with phyloseq and LDM'
 author: "Jessica Randall"
-
 output:
   bookdown::pdf_document2:
+    fig_width: 5
     latex_engine: xelatex
+    toc : false
     
 link-citations: yes
 ---
