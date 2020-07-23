@@ -455,6 +455,7 @@ can be adjusted based on your cutoffs and thresholds.
 
 volcano <- as.data.frame(topTags(qlf, n = 7919))
 
+# color palette of choice
 RdBu4 <- c("#92c5de", "#0571b0", "#f4a582", "#ca0020")
 
 EnhancedVolcano(volcano,
@@ -463,14 +464,14 @@ EnhancedVolcano(volcano,
                 y = "FDR",
                 xlim = c(-5, 5),
                 title= NULL,
-                FCcutoff = 1.0, 
+                subtitle= "Log(2) Fold Change vs -log(10) q values",
+                FCcutoff = 1.0,
                 pCutoff = 0.05,
-                pLabellingCutoff = 0.05,
-                col = RdBu4,
-                subtitle= "Log(2) Fold Change vs -log(10) FDR values",
                 legendPosition = "bottom",
-                legend=c("NS", "Log2 fold-change", "FDR",
-                         "FDR & Log2 fold-change"))
+                legendLabels =c("NS", "Log2 fold-change", "adj P-value",
+                         "adj P-value & Log2 fold-change"), 
+                col = RdBu4)
+
 
 ```
 
