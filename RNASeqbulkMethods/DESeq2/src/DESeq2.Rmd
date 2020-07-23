@@ -95,8 +95,7 @@ sample size analysis.
 
 ```{r load libs and data, message = FALSE, echo = FALSE}
 
-pacman::p_load("readr", "dplyr", "knitr", 
-       "DESeq2", "vsn", "ggplot2", 
+pacman::p_load("readr", "dplyr", "knitr", "DESeq2", "vsn", "ggplot2", 
        "pheatmap", "EnhancedVolcano", "apeglm", "tinytex")
 
 theme_set(theme_minimal())
@@ -394,35 +393,40 @@ bottom of the list.
 
 We also typically provide clients with an initial volcano plot created with the 
 EnhancedVolcano R library. Similar to the PCA plot and heat map, this is a 
-highly customizable graph and we would like to work with you to design graphs 
+highly customizable graph and we will work with you to design graphs 
 which best tell the story of your results. 
 
-A volcano plot is technically a scatter plot where the x-axis has the log2 
+A volcano plot is a scatter plot where the x-axis has the log2 
 transformed fold changes between the compared samples and the y axis has the 
-local adjusted p-values for each gene, also called the q-value. Here we have 
-also labelled the genes with FDR < 0.1 as that is where we set our threshold 
-when we generated our results. The points in red are those which meet the 
-threshold for statistical significance with a q value  less than or equal to 
-0.1 and a log2 fold change of 1.0 or greater. Points in green are those with 
-only log2 fold changes >1.0 and those in blue have claques < 0.1. The points in 
-grey are non statistically significant by any measure. All of these parameters 
-can be adjusted based on your cutoffs and thresholds. 
+local adjusted p-values for each gene, also called the q-values. Here we have 
+also labelled the genes with FDR < 0.05 as that is where we set our threshold 
+when we generated our results. 
+
+We have chosen a custom color scheme for more accessible visualizations. 
+The points in darkest red are those which meet the threshold for statistical significance 
+with a q valueless than or equal to 0.05 and a log2 fold change of 1.0 or greater. 
+Points in darkest blue are those with only log2 fold changes >1.0 and those in light blue have 
+q-values < 0.05. The points in lightest blue are not statistically significant. 
+All of these parameters can be adjusted based on your cutoffs and thresholds. 
 
 ```{r volcano, echo= FALSE, fig.height=5, fig.width=5, message=FALSE}
 
-EnhancedVolcano(res,
-                lab = rownames(res),
+# color palette of choice
+RdBu4 <- c("#92c5de", "#0571b0", "#f4a582", "#ca0020")
+
+EnhancedVolcano(res_df,
+                lab = res_df$ID,
                 x = "log2FoldChange",
                 y = "padj",
                 xlim = c(-6, 6),
                 title= NULL,
                 subtitle= "Log(2) Fold Change vs -log(10) q values",
                 FCcutoff = 1.0,
-                pLabellingCutoff = 0.05,
                 pCutoff = 0.05,
                 legendPosition = "bottom",
-                legend=c("NS", "Log2 fold-change", "adj P-value",
-                         "adj P-value & Log2 fold-change"))
+                legendLabels =c("NS", "Log2 fold-change", "adj P-value",
+                         "adj P-value & Log2 fold-change"), 
+                col = RdBu4)
 
 ```
 
