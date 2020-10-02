@@ -1,6 +1,7 @@
 ---
 title: 'RNA-seq Differential Expression (DE) Analysis Using baySeq'
 author: "Jessica Randall"
+date: "Last compiled `r format(Sys.time(), '%d %B, %Y')`"
 output:
   bookdown::pdf_document2:
     fig_width: 5
@@ -109,29 +110,34 @@ sample size analysis.
 
 ```{r load libs and data, message = FALSE, echo = FALSE}
 
-pacman::p_load("rmarkdown","readr","here", 
-               "dplyr", "knitr", "tidyr", 
-               "baySeq","DESeq2", "vsn", "ggplot2",
-               "EnhancedVolcano", "pheatmap", "random", "tinytex")
+pacman::p_load(
+  "rmarkdown", "readr", "here",
+  "dplyr", "knitr", "tidyr",
+  "baySeq", "DESeq2", "vsn", "ggplot2",
+  "EnhancedVolcano", "pheatmap", "random", "tinytex"
+)
 
-set.seed(seed= 22310)
+set.seed(seed = 22310)
 
 theme_set(theme_minimal())
 
-countdata <- as.matrix(read.csv(system.file("extdata", 
-                                            "pasilla_gene_counts.tsv",
-                                            package="pasilla",
-                                            mustWork=TRUE), sep = "\t", 
-                                row.names = "gene_id"))
+countdata <- as.matrix(read.csv(system.file("extdata",
+  "pasilla_gene_counts.tsv",
+  package = "pasilla",
+  mustWork = TRUE
+),
+sep = "\t",
+row.names = "gene_id"
+))
 
 sampledata <- as.data.frame(read.csv(system.file("extdata",
-                                                 
-"pasilla_sample_annotation.csv",
-                                                 package="pasilla", 
-mustWork=TRUE), row.names = 1))
 
-sampledata <- sampledata[,c("condition","type")]
+  "pasilla_sample_annotation.csv",
+  package = "pasilla",
+  mustWork = TRUE
+), row.names = 1))
 
+sampledata <- sampledata[, c("condition", "type")]
 ```
 
 ### Preparing for Analysis {-}
@@ -156,21 +162,26 @@ from the data.
 
 ```{r create CD object, message = FALSE}
 
-groups<- list(
-  NDE = c("untreated","untreated","untreated","untreated","untreated",
-  "untreated", "untreated"),
-  DE = c("untreated","untreated","untreated","untreated","treated", 
-       "treated", "treated"))
+groups <- list(
+  NDE = c(
+    "untreated", "untreated", "untreated", "untreated", "untreated",
+    "untreated", "untreated"
+  ),
+  DE = c(
+    "untreated", "untreated", "untreated", "untreated", "treated",
+    "treated", "treated"
+  )
+)
 
-CD <- new("countData", 
-          data = countdata, 
-          replicates = sampledata$condition, 
-          groups = groups)
+CD <- new("countData",
+  data = countdata,
+  replicates = sampledata$condition,
+  groups = groups
+)
 
 libsizes(CD) <- getLibsizes(CD)
 
-CD@annotation <-data.frame(name = rownames(countdata))
-
+CD@annotation <- data.frame(name = rownames(countdata))
 ```
 
 ### Determine Prior Probabilities {-}
@@ -188,7 +199,7 @@ of samples, and the number of groups you are comparing.
 
 ```{r priors, message = FALSE}
 
-if(require("parallel")) cl <- makeCluster(8) else cl <- NULL
+if (require("parallel")) cl <- makeCluster(8) else cl <- NULL
 
 start_time <- Sys.time()
 
@@ -197,7 +208,6 @@ CD <- getPriors.NB(CD, samplesize = 10000, estimation = "QL", cl = cl)
 end_time <- Sys.time()
 
 end_time - start_time
-
 ```
 
 ### Determine Posterior Likelihoods {-}
@@ -219,7 +229,6 @@ CD <- getLikelihoods(CD, bootStraps = 3, verbose = FALSE, cl = cl)
 end_time <- Sys.time()
 
 end_time - start_time
-
 ```
 
 If we had any additional data to add about the samples that we wanted to 
@@ -256,18 +265,20 @@ since we haven't labelled each sample on the graph.
 
 ```{r exploratory pca, fig.height=5, fig.width=5, echo = FALSE, message = FALSE}
 
-dds <- DESeqDataSetFromMatrix(countData = countdata,
-                              colData = sampledata,
-                              design = ~ condition)
+dds <- DESeqDataSetFromMatrix(
+  countData = countdata,
+  colData = sampledata,
+  design = ~condition
+)
 
-vst_dds <- vst(dds, blind=FALSE)
+vst_dds <- vst(dds, blind = FALSE)
 
-pca_coords <- plotPCA(vst_dds, 
-                      intgroup=c("condition"), 
-                      returnData = TRUE)
+pca_coords <- plotPCA(vst_dds,
+  intgroup = c("condition"),
+  returnData = TRUE
+)
 
-plotPCA(vst_dds, intgroup=c("condition"))
-
+plotPCA(vst_dds, intgroup = c("condition"))
 ```
 
 We would interpret this as the samples being pretty clearly by group and 
@@ -308,8 +319,10 @@ successfully we typically export them as a .csv file for you.
 
 ``` {r results_export, message = FALSE, echo = FALSE}
 
-results_df <- as.data.frame(topCounts(CD, group="DE", normaliseData=TRUE, 
-FDR=0.05)) %>%
+results_df <- as.data.frame(topCounts(CD,
+  group = "DE", normaliseData = TRUE,
+  FDR = 0.05
+)) %>%
   arrange(FDR.DE)
 
 row.names(results_df) <- results_df$name
@@ -333,33 +346,37 @@ visualize is customizable based on your project with EICC.
 
 vst_df <- as.data.frame(assays(vst_dds))
 
-vst_df <- vst_df[c("treated1fb", "treated2fb", "treated3fb",
-                   "untreated1fb", "untreated2fb", "untreated3fb", 
-"untreated4fb")]
+vst_df <- vst_df[c(
+  "treated1fb", "treated2fb", "treated3fb",
+  "untreated1fb", "untreated2fb", "untreated3fb",
+  "untreated4fb"
+)]
 
 res_heat <- as.data.frame(results_df)
 
-sel_padj20 <- order(res_heat$FDR.DE, 
-                    decreasing = FALSE)[1:20]
+sel_padj20 <- order(res_heat$FDR.DE,
+  decreasing = FALSE
+)[1:20]
 
 annotation <- as.data.frame(colData(dds)["condition"])
 
 pheatmap(vst_df[sel_padj20, ],
-         cluster_rows= FALSE,
-         show_rownames = TRUE,
-         cluster_cols = FALSE,
-         annotation_col = annotation,
-         width = 1)
+  cluster_rows = FALSE,
+  show_rownames = TRUE,
+  cluster_cols = FALSE,
+  annotation_col = annotation,
+  width = 1
+)
 
 sel_padj200 <- order(res_heat$FDR.DE, decreasing = FALSE)[1:200]
 
 pheatmap(vst_df[sel_padj200, ],
-         cluster_rows= TRUE,
-         show_rownames = FALSE,
-         cluster_cols = TRUE,
-         annotation_col = annotation,
-         width = 1)
-
+  cluster_rows = TRUE,
+  show_rownames = FALSE,
+  cluster_cols = TRUE,
+  annotation_col = annotation,
+  width = 1
+)
 ```
 
 Please note that these are sorted for convenience but the gene at the top of 
@@ -389,13 +406,12 @@ would suggest for a publication.
 
 ```{r plotma, echo= FALSE, fig.height=5, fig.width=5, message=FALSE}
 
-plotMA.CD(CD, 
-          samplesA = 1:4, samplesB = 5:7, 
-          col = c(rep("orange", 100), rep("darkblue", 900)),
-          xlab= "Mean Normalized counts",
-          ylab = "Log ratio of Posterior Likelihoods")
-
-
+plotMA.CD(CD,
+  samplesA = 1:4, samplesB = 5:7,
+  col = c(rep("orange", 100), rep("darkblue", 900)),
+  xlab = "Mean Normalized counts",
+  ylab = "Log ratio of Posterior Likelihoods"
+)
 ```
 
 There are many more functions and many more specifications to functions than 
@@ -417,7 +433,7 @@ ataVisualizationMenu.pdf).
 ### Session information and References {-}
 
 ```{r sessioninfo, message = FALSE, echo = FALSE}
-if(!is.null(cl)) stopCluster(cl)
+if (!is.null(cl)) stopCluster(cl)
 date()
 sessionInfo()
 citation("bookdown")

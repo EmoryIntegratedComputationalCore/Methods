@@ -2,6 +2,7 @@
 title: 'Power & Sample Size assessment for differential expression analysis of 
 RNA-Seq experiments using PROPER'
 author: "Jessica Randall"
+date: "Last compiled `r format(Sys.time(), '%d %B, %Y')`"
 output:
   bookdown::pdf_document2:
     latex_engine: xelatex
@@ -72,12 +73,13 @@ depending on how different you expect your groups to be.
 
 pacman::p_load("PROPER")
 
-ourscenario <- RNAseq.SimOptions.2grp(ngenes = 24000, 
-                                      p.DE = 0.05, 
-                                      lOD = "cheung",
-                                      seqDepth = 50000000, 
-                                      sim.seed = 22310)
-
+ourscenario <- RNAseq.SimOptions.2grp(
+  ngenes = 24000,
+  p.DE = 0.05,
+  lOD = "cheung",
+  seqDepth = 50000000,
+  sim.seed = 22310
+)
 ```
 
 ### DE Gene Detection {-}
@@ -101,15 +103,18 @@ experiment.
 
 start_time <- Sys.time()
 
-simulations <-{runSims(Nreps = c(3,5,7,10), 
-                     sim.opts=ourscenario,
-                     DEmethod ="DESeq2", 
-                     nsims=20) }
+simulations <- {
+  runSims(
+    Nreps = c(3, 5, 7, 10),
+    sim.opts = ourscenario,
+    DEmethod = "DESeq2",
+    nsims = 20
+  )
+}
 
 end_time <- Sys.time()
 
 end_time - start_time
-
 ```
 
 ### Power Assessment {-}
@@ -121,14 +126,15 @@ will discuss the appropriate parameters for your project.
 
 ```{r assessment, message = FALSE}
 
-power <- comparePower(simulations, 
-                      alpha.type = "fdr", 
-                      alpha.nominal = 0.05,
-                      strata = c(0, 10, 2^(1:7)*10, Inf),
-                      filter.by = "expr",
-                      strata.filtered = 1, 
-                      stratify.by = "expr",
-                      delta = 1)
+power <- comparePower(simulations,
+  alpha.type = "fdr",
+  alpha.nominal = 0.05,
+  strata = c(0, 10, 2^(1:7) * 10, Inf),
+  filter.by = "expr",
+  strata.filtered = 1,
+  stratify.by = "expr",
+  delta = 1
+)
 
 summaryPower(power)
 ```
@@ -160,7 +166,6 @@ sufficiently high across all count strata.
 ```{r visualize, echo=FALSE, fig.height=6, fig.width=6, message=FALSE}
 
 plotPower(power)
-
 ```
 
 We look forward to working with you to assess the necessary sample size for 
