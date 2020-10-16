@@ -1,6 +1,7 @@
 ---
 title: '16s Microbiome Analysis with phyloseq and LDM'
 author: "Jessica Randall"
+date: "Last compiled `r format(Sys.time(), '%d %B, %Y')`"
 output:
   bookdown::pdf_document2:
     fig_width: 5
@@ -80,12 +81,13 @@ qza_to_phyloseq function in phyloseq to import the data as a phyloseq object.
 
 ```{r load packages, message=FALSE, warning=FALSE}
 
-pacman::p_load("knitr", "devtools","phyloseq","tidyverse", "qiime2R",
-               "reshape2", "xml2", "GUniFrac", "vegan", "LDM", 
-               "ggfortify", "janitor", "tinytex")
+pacman::p_load(
+  "knitr", "devtools", "phyloseq", "tidyverse", "qiime2R",
+  "reshape2", "xml2", "GUniFrac", "vegan", "LDM",
+  "ggfortify", "janitor", "tinytex"
+)
 
-data ("GlobalPatterns")
-
+data("GlobalPatterns")
 ```
 
 ### Prepare data {-}
@@ -103,19 +105,20 @@ project specific.
 
 GP <- prune_taxa(taxa_sums(GlobalPatterns) > 0, GlobalPatterns)
 
-human <- get_variable(GP, "SampleType") %in% c("Feces", "Mock", "Skin", 
-"Tongue")
+human <- get_variable(GP, "SampleType") %in% c(
+  "Feces", "Mock", "Skin",
+  "Tongue"
+)
 
 sample_data(GP)$human <- factor(human)
 
-sample_data(GP)$human<-ifelse(human == TRUE, "Human", "Not-Human")
-
+sample_data(GP)$human <- ifelse(human == TRUE, "Human", "Not-Human")
 ```
 
+\newpage
 ## Exploratory Data Analysis with phyloseq {-}
 
 ### Richness estimation {-}
-
 ##### Alpha Diversity {-}
 
 To compare richness estimates within samples we typically provide the Shannon 
@@ -124,22 +127,16 @@ metrics. While this dataset does not include control samples we would suggest
 including Zymo controls, Positive Controls, and Negative Controls in your 
 sequencing along with your experimental samples.
 
-Here we have also specified that we would like the Classic ggplot2 theme,which 
-gives a white background with a rainbow of colors for each box plot. This color 
-scheme is customizable and we would be happy to use one to fit your project. 
-Please see our Data Visualization Menu linked 
-[here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
-ataVisualizationMenu.pdf)
-
 ```{r alphadiv, fig.height = 5, fig.width = 7 , message = FALSE, echo = FALSE}
 
-(alphadivplot <- plot_richness(GP, "SampleType", measures = c("Shannon")) + 
-  geom_boxplot(aes(SampleType, value, fill = SampleType), size = 0.5, alpha = 
-0.6) + 
+(alphadivplot <- plot_richness(GP, "SampleType", measures = c("Shannon")) +
+  geom_boxplot(aes(SampleType, value, fill = SampleType),
+    size = 0.5, alpha =
+      0.6
+  ) +
   geom_jitter(width = 0.25) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90)))
-
 ```
 
 Each box groups the sample types by whether they come from a human or not. Each 
@@ -164,7 +161,6 @@ all of the samples in each control type are extremely similar to each other and
 more similar to one another than to other sample types.
 
 ### Correspondence Analysis {-}
-
 ##### Beta Diversity {-}
 
 Similarly to a Principal Components Analysis a Correspondence Analysis tells us 
@@ -187,23 +183,25 @@ samples.
 ```{r betadiv, echo = FALSE, fig.height  = 5, fig.width = 7, message = FALSE}
 
 topsp <- names(sort(taxa_sums(GP), TRUE)[1:200])
-GP    <- prune_taxa(topsp, GP)
+GP <- prune_taxa(topsp, GP)
 
-top5ph <- sort(tapply(taxa_sums(GP), tax_table(GP)[, "Phylum"], sum), 
-decreasing=TRUE)[1:5]
-GP     <- subset_taxa(GP, Phylum %in% names(top5ph))
+top5ph <- sort(tapply(taxa_sums(GP), tax_table(GP)[, "Phylum"], sum),
+  decreasing = TRUE
+)[1:5]
+GP <- subset_taxa(GP, Phylum %in% names(top5ph))
 
 # Re-add human variable to sample data:
 sample_data(GP)$human <- factor(human)
-sample_data(GP)$human <-ifelse(human == TRUE, "Human", "Not-Human")
+sample_data(GP)$human <- ifelse(human == TRUE, "Human", "Not-Human")
 
-GPca  <- ordinate(GP, "CCA", "bray")
+GPca <- ordinate(GP, "CCA", "bray")
 
-(betadivplot <-plot_ordination(GP, GPca, "samples", color = "SampleType", shape 
-= "human") + 
-  geom_point(size=3) + 
+(betadivplot <- plot_ordination(GP, GPca, "samples",
+  color = "SampleType", shape
+  = "human"
+) +
+  geom_point(size = 3) +
   theme_minimal())
-
 ```
 
 Looking at the first and second CAs we see that the Ocean and Freshwater 
@@ -220,6 +218,8 @@ between these samples is whether or not they come from human samples.This seems
 biologically reasonable since we would expect samples from humans would be more 
 similar to one another than samples from waterways or sediment.
 
+\newpage
+
 ### Phyla-specific abundance plot {-}
 
 Next, we want to see which particular phyla differ between human and non-human 
@@ -227,21 +227,25 @@ samples. We can do this with a bar plot with abundance graphed along the y-axis
 and whether the samples are human or not along the x-axis. 
 
 ```{r taxa bar, echo = FALSE, fig.height = 5, fig.width = 8, message = FALSE}
-p1  <- 
-  plot_ordination(GP, GPca, "species", color="Phylum")
+p1 <-
+  plot_ordination(GP, GPca, "species", color = "Phylum")
 
-mdf <- 
-  melt(p1$data[, c("CA1", "CA2", "Phylum", "Family", "Genus")], 
-            id=c("Phylum", "Family", "Genus") )
+mdf <-
+  melt(p1$data[, c("CA1", "CA2", "Phylum", "Family", "Genus")],
+    id = c("Phylum", "Family", "Genus")
+  )
 
-plot_bar(GP, x="human", fill="SampleType", 
-             facet_grid = ~ Phylum, title = "Most Abundant Phyla Across 
-Groups") + 
-    geom_bar(aes(color = SampleType, fill = SampleType), stat = "identity", 
-position="stack") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 90))
-
+plot_bar(GP,
+  x = "human", fill = "SampleType",
+  facet_grid = ~Phylum, title = "Most Abundant Phyla Across 
+Groups"
+) +
+  geom_bar(aes(color = SampleType, fill = SampleType),
+    stat = "identity",
+    position = "stack"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90))
 ```
 
 Here we see that Cyanobacteria and Actinobacteria are most abundant in the 
@@ -255,6 +259,7 @@ out some additional examples from previous projects
 [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
 ataVisualizationMenu.pdf)
 
+\newpage
 ## Statistical Analysis with LDM {-}
 
 We need to recover the data from the phyloseq object and transform the taxa 
@@ -275,8 +280,10 @@ GP_LDM <- prune_taxa(taxa_sums(GlobalPatterns) > 0, GlobalPatterns)
 
 meta <- as.data.frame(psmelt(GP_LDM)) %>%
   clean_names(case = "snake") %>%
-  select(x_sample_id, sample_type, description, 
-         primer, final_barcode, barcode_truncated_plus_t, barcode_full_length) %>%
+  select(
+    x_sample_id, sample_type, description,
+    primer, final_barcode, barcode_truncated_plus_t, barcode_full_length
+  ) %>%
   mutate(sample_id = as.factor(tolower(x_sample_id))) %>%
   group_by(x_sample_id) %>%
   slice(1)
@@ -284,11 +291,10 @@ meta <- as.data.frame(psmelt(GP_LDM)) %>%
 asvs <- as.data.frame(otu_table(GP_LDM)) %>%
   clean_names()
 
-asvs_t <-as.data.frame(t(asvs)) %>%
+asvs_t <- as.data.frame(t(asvs)) %>%
   mutate(sample_id = as.factor(levels(as.factor(meta$x_sample_id))))
 
 row.names(asvs_t) <- asvs_t$sample_id
-
 ```
 
 Since the ASVs have the taxa as rows and we need them as columns, we can use 
@@ -304,8 +310,7 @@ project.
 
 otu_pres <- which(colSums(asvs_t[1:18988] > 0) >= 5)
 
-asvs_filt <- asvs_t[,otu_pres]
-
+asvs_filt <- asvs_t[, otu_pres]
 ```
 
 At this point we have `r nrow(asvs_filt)` samples and `r ncol(asvs_filt)` taxa.
@@ -319,6 +324,8 @@ microbial composition, it will be the only covariate of interest. LDM can
 handle covariates both categorical and continuous and can control for 
 confounders.
 
+\newpage
+
 ### Correspondence Analysis {-}
 
 Above, we colored samples by their type and used different shapes to indicate 
@@ -329,10 +336,9 @@ this variable.
 
 ```{r ordplot2, message = FALSE, echo = FALSE, fig.height = 5, fig.width = 7}
 
-(betadiv_human <-plot_ordination(GP, GPca, "samples", color="human") +
-  geom_point(size=3) +
+(betadiv_human <- plot_ordination(GP, GPca, "samples", color = "human") +
+  geom_point(size = 3) +
   theme_minimal())
-
 ```
 
 By coloring the samples by whether the come from humans or not we see that they 
@@ -345,6 +351,8 @@ To examine this relationship we first specify our model, called by stating we
 would like to assess whether or not a sample being from a human significantly 
 impacts its microbiome composition.
 
+\newpage
+
 ### Fit the LDM {-}
 
 
@@ -353,12 +361,14 @@ impacts its microbiome composition.
 form <- asvs_filt ~ human
 
 
-fit <-ldm(formula = form, 
-          data = meta,
-          dist.method ="bray", 
-          n.perm.max=0)
-
+fit <- ldm(
+  formula = form,
+  data = meta,
+  dist.method = "bray",
+  n.perm.max = 0
+)
 ```
+
 
 ### Global Hypothesis Testing {-}
 
@@ -380,17 +390,18 @@ Bray Curtis distance but LDM offers many options to customize this parameter.
 
 ```{r fitglobal, message=FALSE, warning=FALSE}
 
-seed <-22310
+seed <- 22310
 
-fit2 <- ldm(formula = form, 
-            data = meta,
-            dist.method = "bray", 
-            test.global = TRUE, 
-            test.otu = FALSE, 
-            seed = seed)
+fit2 <- ldm(
+  formula = form,
+  data = meta,
+  dist.method = "bray",
+  test.global = TRUE,
+  test.otu = FALSE,
+  seed = seed
+)
 
-(global_p <-fit2$p.global.omni)
-
+(global_p <- fit2$p.global.omni)
 ```
 
 ### ASV-specific Hypothesis Testing {-}
@@ -410,14 +421,15 @@ have a higher FDR where more specific studies may wish to have a smaller one.
 
 ```{r fitlocal, message=FALSE, warning=FALSE}
 
-fit3 <-ldm(formula = form, 
-           data = meta,
-           dist.method = "bray",
-          test.global=TRUE, 
-          test.otu = TRUE, 
-          fdr.nominal = 0.05, 
-          seed = seed)
-
+fit3 <- ldm(
+  formula = form,
+  data = meta,
+  dist.method = "bray",
+  test.global = TRUE,
+  test.otu = TRUE,
+  fdr.nominal = 0.05,
+  seed = seed
+)
 ```
 
 After fitting our model, we can find out how many and which ASVs and associated 
@@ -431,20 +443,20 @@ taxatable <- as.data.frame(tax_table(GP_LDM)) %>%
 
 results_taxa <- subset(taxatable, row.names(taxatable) %in% colnames(asvs_filt))
 
-Kingdom <-results_taxa$kingdom
-Phylum <-results_taxa$phylum
-Class <-results_taxa$class
-Order <-results_taxa$order
-Genus <-results_taxa$genus
-Species <-results_taxa$species
-pvals <-t(fit3$p.otu.omni)
-qvals <-t(fit3$q.otu.omni)
+Kingdom <- results_taxa$kingdom
+Phylum <- results_taxa$phylum
+Class <- results_taxa$class
+Order <- results_taxa$order
+Genus <- results_taxa$genus
+Species <- results_taxa$species
+pvals <- t(fit3$p.otu.omni)
+qvals <- t(fit3$q.otu.omni)
 
-res <-data.frame(Kingdom,Phylum,Class,Order,Genus,Species,pvals,qvals)
+res <- data.frame(Kingdom, Phylum, Class, Order, Genus, Species, pvals, qvals)
 
-resqOrdered <- as.data.frame(res[order(res$qvals),])
+resqOrdered <- as.data.frame(res[order(res$qvals), ])
 
-head(resqOrdered,5)
+head(resqOrdered, 5)
 ```
 
 The most significantly abundant bacteria may or may not be the most clinically 
@@ -464,12 +476,11 @@ some previous graphs
 [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
 ataVisualizationMenu.pdf)
 
-### Session information and References {-}
+### Session information {-}
 
 ```{r sessioninfo, message = FALSE, echo = FALSE}
 
 date()
 sessionInfo()
-
 ```
 <!---- done ---->

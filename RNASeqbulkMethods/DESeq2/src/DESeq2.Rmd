@@ -1,6 +1,7 @@
 ---
 title: 'RNA-seq Differential Expression (DE) Analysis Using DESeq2'
 author: "Jessica Randall"
+date: "Last compiled `r format(Sys.time(), '%d %B, %Y')`"
 output:
   bookdown::pdf_document2:
     fig_width: 5
@@ -95,24 +96,30 @@ sample size analysis.
 
 ```{r load libs and data, message = FALSE, echo = FALSE}
 
-pacman::p_load("readr", "dplyr", "knitr", "DESeq2", "vsn", "ggplot2", 
-       "pheatmap", "EnhancedVolcano", "apeglm", "tinytex")
+pacman::p_load(
+  "readr", "dplyr", "knitr", "DESeq2", "vsn", "ggplot2",
+  "pheatmap", "EnhancedVolcano", "apeglm", "tinytex")
 
 theme_set(theme_minimal())
 
 countdata <- as.matrix(read.csv(system.file("extdata",
-                                            "pasilla_gene_counts.tsv",
-                                            package="pasilla",mustWork=TRUE),
-                                sep = "\t", row.names = "gene_id"))
+  "pasilla_gene_counts.tsv",
+  package = "pasilla", mustWork = TRUE
+),
+sep = "\t", row.names = "gene_id"
+))
 
 sampledata <- as.data.frame(
-                            read.csv
-                            (system.file("extdata",
-                                         "pasilla_sample_annotation.csv",
-                                         package="pasilla", mustWork=TRUE), 
-                             row.names = 1))
+  read.csv
+  (system.file("extdata",
+      "pasilla_sample_annotation.csv",
+      package = "pasilla", mustWork = TRUE
+    ),
+    row.names = 1
+  )
+)
 
-sampledata <- sampledata[,c("condition","type")]
+sampledata <- sampledata[, c("condition", "type")]
 ```
 
 Our data is almost ready to analyze but first, DESeq2 requires that the row 
@@ -127,10 +134,9 @@ is where sample ids or abbreviated sample names are stored.
 
 rownames(sampledata) <- sub("fb", "", rownames(sampledata))
 
-countdata <- countdata[,rownames(sampledata)]
+countdata <- countdata[, rownames(sampledata)]
 
 stopifnot(rownames(sampledata) %in% colnames(countdata))
-
 ```
 
 Now that we know this is true, we can proceed.
@@ -146,10 +152,12 @@ between the samples as inputs.
 Next, we specify that the untreated group is our reference group to which 
 we would like to compare our treated samples.
 
-``` {r create dds object, message = FALSE}
-dds <- DESeqDataSetFromMatrix(countData = countdata,
-                              colData = sampledata,
-                              design = ~ condition)
+``` {r create dds object, message = FALSE, warning=FALSE}
+dds <- DESeqDataSetFromMatrix(
+  countData = countdata,
+  colData = sampledata,
+  design = ~condition
+)
 
 dds$condition <- relevel(dds$condition, ref = "untreated")
 ```
@@ -180,15 +188,34 @@ We can use the same plotPCA function to obtain the coordinates for each sample
 on the plot. This is helpful in identifying samples we would consider outliers 
 since we haven't labelled each sample on the graph. 
 
-```{r exploratory pca, fig.height=5, fig.width=5, echo = FALSE}
-vst_dds <- vst(dds, blind=FALSE)
+```{r exploratory pca, fig.height=4, fig.width=4, echo = FALSE}
+# perform variance stabilizing transformation for PCA and Heatmaps
+vsd <- vst(dds, blind = FALSE)
 
-pca_coords <- plotPCA(vst_dds, 
-                      intgroup=c("condition"), 
-                      returnData = TRUE)
+# calculate the variance for each gene
+# select the ntop genes by variance
+rv <- rowVars(assay(vsd))
+select_ntops <- order(rv, decreasing = TRUE)[seq_len(min(500, length(rv)))]
 
-plotPCA(vst_dds, intgroup=c("condition"))
+# perform a PCA on the data in assay(x) for the selected genes
+pca <- prcomp(t(assay(vsd)[select_ntops, ]))
 
+# calculate the contribution to the total variance for each component
+percentVar <- pca$sdev^2 / sum(pca$sdev^2)
+
+# assemble the data for each plot
+d_group <- data.frame(
+  PC1 = pca$x[, 1], PC2 = pca$x[, 2],
+  group = sampledata$condition,
+  name = colnames(vsd))
+
+(pca <- ggplot(d_group, aes_string(x = "PC1", y = "PC2", color = "group")) +
+  geom_point(size = 3) +
+  ggtitle("Principal Components Analysis (by group)") +
+  xlab(paste0("PC1: ", round(percentVar[1] * 100), "% variance")) +
+  ylab(paste0("PC2: ", round(percentVar[2] * 100), "% variance")) +
+  theme_minimal() +
+  scale_color_manual(values = c("#2c7bb6", "#b2182b")))
 ```
 
 We would interpret this as the samples being somewhat clustered clearly by 
@@ -202,6 +229,8 @@ sources of variability we may not have accounted for like sex or ethnicity
 which are often leading contributors of variability between samples and should 
 be accounted for in experimental design if you wish to control for their 
 effects. 
+
+\newpage
 
 ### Prefiltering {-}
 
@@ -263,13 +292,14 @@ removal of any additional genes with low counts.
 
 dds <- DESeq(dds)
 
-res <- results(dds, 
-               alpha=0.05, 
-               name = "condition_treated_vs_untreated")
+res <- results(dds,
+  alpha = 0.05,
+  name = "condition_treated_vs_untreated"
+)
 
 summary(res)
-
 ```
+
 ### Results {-}
 
 In this example we see that while controlling the adjusted p/FDR threshold at 
@@ -318,9 +348,10 @@ successfully we would typically export them as a .csv file for you.
 
 ``` {r results, message = FALSE, echo = FALSE}
 
-LFC_dds <-as.data.frame(lfcShrink(dds, 
-                                  coef="condition_treated_vs_untreated", 
-                                  type = "apeglm", svalue = TRUE)) %>%
+LFC_dds <- as.data.frame(lfcShrink(dds,
+  coef = "condition_treated_vs_untreated",
+  type = "apeglm", svalue = TRUE
+)) %>%
   arrange(log2FoldChange)
 
 res_df <- as.data.frame(res) %>%
@@ -332,6 +363,8 @@ res_df <- as.data.frame(res) %>%
 row.names(res_df) <- res_df$ID
 stopifnot(nrow(res_df) == 14599 & ncol(res_df) == 8)
 ```
+
+\newpage
 
 ### Visualizing {-}
 
@@ -351,33 +384,48 @@ between groups with 100-200 genes on a plot setup this way. The first graph
 shows 20 genes and the second graph shows 200 genes. 
 
 ```{r visualize, echo= FALSE, fig.height=3.5, fig.width=3.5, message=FALSE}
-vst_df <- as.data.frame(assays(vst_dds))
 
-vst_df <- vst_df[c("treated1", "treated2", "treated3",
-                   "untreated1", "untreated2", "untreated3", "untreated4")]
+# specify color palette of choice, this comes from colorbrewer2.org and are
+# all color-blind accessible colors, you can create a custom palette or
+# use a built-in palette from colorbrewer if you wish
+RdBu11 <- c(
+  "#313695", "#4575b4", "#74add1", "#abd9e9",
+  "#e0f3f8", "#ffffbf", "#fee090", "#fdae61",
+  "#f46d43", "#d73027", "#a50026")
+
+vst_df <- as.data.frame(assays(dds))
+
+vst_df <- vst_df[c(
+  "treated1", "treated2", "treated3",
+  "untreated1", "untreated2", "untreated3", "untreated4"
+)]
 
 res_heat <- as.data.frame(res)
-sel_padj20 <- order(res_heat$padj, 
-                    decreasing = FALSE)[1:20]
+sel_padj20 <- order(res_heat$padj,
+  decreasing = FALSE
+)[1:20]
 
 annotation <- as.data.frame(colData(dds)["condition"])
 
 pheatmap(vst_df[sel_padj20, ],
-         cluster_rows= FALSE,
-         show_rownames = TRUE,
-         cluster_cols = FALSE,
-         annotation_col = annotation,
-         width = 1)
+  color = RdBu11,
+  cluster_rows = FALSE,
+  show_rownames = TRUE,
+  cluster_cols = FALSE,
+  annotation_col = annotation,
+  width = 1
+)
 
 sel_padj200 <- order(res_heat$padj, decreasing = FALSE)[1:200]
 
 pheatmap(vst_df[sel_padj200, ],
-         cluster_rows= TRUE,
-         show_rownames = FALSE,
-         cluster_cols = TRUE,
-         annotation_col = annotation,
-         width = 1)
-
+  color = RdBu11,
+  cluster_rows = TRUE,
+  show_rownames = FALSE,
+  cluster_cols = TRUE,
+  annotation_col = annotation,
+  width = 1
+)
 ```
 
 Here we see the differences in mean-normalized counts between the samples in 
@@ -415,19 +463,21 @@ All of these parameters can be adjusted based on your cutoffs and thresholds.
 RdBu4 <- c("#92c5de", "#0571b0", "#f4a582", "#ca0020")
 
 EnhancedVolcano(res_df,
-                lab = res_df$ID,
-                x = "log2FoldChange",
-                y = "padj",
-                xlim = c(-6, 6),
-                title= NULL,
-                subtitle= "Log(2) Fold Change vs -log(10) q values",
-                FCcutoff = 1.0,
-                pCutoff = 0.05,
-                legendPosition = "bottom",
-                legendLabels =c("NS", "Log2 fold-change", "adj P-value",
-                         "adj P-value & Log2 fold-change"), 
-                col = RdBu4)
-
+  lab = res_df$ID,
+  x = "log2FoldChange",
+  y = "padj",
+  xlim = c(-6, 6),
+  title = NULL,
+  subtitle = "Log(2) Fold Change vs -log(10) q values",
+  FCcutoff = 1.0,
+  pCutoff = 0.05,
+  legendPosition = "bottom",
+  legendLabels = c(
+    "NS", "Log2 fold-change", "adj P-value",
+    "adj P-value & Log2 fold-change"
+  ),
+  col = RdBu4
+)
 ```
 
 There are many more functions and many more specifications to functions than 
@@ -445,6 +495,8 @@ our contact information available on our
 of the graphs we've made for previous clients 
 [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
 ataVisualizationMenu.pdf).
+
+\newpage
 
 ### Session information and References {-}
 

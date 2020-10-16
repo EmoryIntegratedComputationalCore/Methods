@@ -1,6 +1,7 @@
 ---
 title: 'RNA-seq Differential Expression (DE) Analysis Using edgeR'
 author: "Jessica Randall"
+date: "Last compiled `r format(Sys.time(), '%d %B, %Y')`"
 output:
   bookdown::pdf_document2:
     fig_width: 5
@@ -91,22 +92,27 @@ sample size analysis.
 
 ```{r load libs and data, message = FALSE, echo = FALSE}
 
-pacman::p_load("readr", "knitr", "tidyverse", "edgeR", "RColorBrewer", 
-"EnhancedVolcano")
+pacman::p_load(
+  "readr", "knitr", "tidyverse", "edgeR", "RColorBrewer",
+  "EnhancedVolcano"
+)
 
-countdata <- read.delim(system.file("extdata", 
-                                    "pasilla_gene_counts.tsv",
-                                    package="pasilla",mustWork=TRUE), sep = 
-"\t", row.names = "gene_id")
+countdata <- read.delim(system.file("extdata",
+  "pasilla_gene_counts.tsv",
+  package = "pasilla", mustWork = TRUE
+),
+sep =
+  "\t", row.names = "gene_id"
+)
 
 sampledata <- as.data.frame(read.csv(system.file("extdata",
-                                                 
-"pasilla_sample_annotation.csv",
-                                                 package="pasilla", 
-mustWork=TRUE), row.names = 1))
 
-sampledata <- sampledata[,c("condition","type")]
+  "pasilla_sample_annotation.csv",
+  package = "pasilla",
+  mustWork = TRUE
+), row.names = 1))
 
+sampledata <- sampledata[, c("condition", "type")]
 ```
 
 ### Preparing for Analysis {-}
@@ -129,14 +135,16 @@ the untreated group is our reference group with the ref="untreated" statement.
 
 ``` {r create DGE List object, message = FALSE}
 
-y <- DGEList(counts = countdata, 
-             group = sampledata$condition)
+y <- DGEList(
+  counts = countdata,
+  group = sampledata$condition
+)
 
-y2<-y
+y2 <- y
 
-y2$samples$group <- relevel(y2$samples$group, 
-                           ref="untreated")
-
+y2$samples$group <- relevel(y2$samples$group,
+  ref = "untreated"
+)
 ```
 
 ### Design Matrix {-}
@@ -158,7 +166,7 @@ be the same as the column names in the cpm which are the IDs of our samples.
 
 ```{r design, message = FALSE}
 
-design <-model.matrix(~ 0 + group, data = y2$samples)
+design <- model.matrix(~ 0 + group, data = y2$samples)
 
 colnames(design) <- levels(y2$samples$group)
 rownames(design) <- colnames(y2$counts)
@@ -180,16 +188,16 @@ tells us how much group membership (i.e. being untreated or treated)
 contributes to the differences between the samples and we hope this will be 
 high. 
 
-```{r exploratory pca, fig.height=6, fig.width=6, echo = FALSE, message = FALSE}
+```{r exploratory pca, fig.height=5, fig.width=5, echo = FALSE, message = FALSE}
 
-#two extreme colors from the RdYlBU palette on colorbrewer2.org, blue, red
+# two extreme colors from the RdYlBU palette on colorbrewer2.org, blue, red
 colors <- rep(c("#313695", "#d73027"), 2)
 
-plotMDS.DGEList(y2, 
-                col=colors[y2$sample$group], 
-                gene.selection="common",
-                main="Variability between Samples by Condition")
-
+plotMDS.DGEList(y2,
+  col = colors[y2$sample$group],
+  gene.selection = "common",
+  main = "Variability between Samples by Condition"
+)
 ```
 
 This is a great looking PCA plot because it shows that it is our samples are 
@@ -231,7 +239,6 @@ expressed genes as needed.
 keep <- filterByExpr(y2, design)
 
 table(keep)
-
 ```
 
 ### Recalculate library size {-}
@@ -243,8 +250,7 @@ this by hand.
 
 ```{r recalc, message = FALSE}
 
-y2 <- y2[keep, ,keep.lib.sizes=FALSE]
-
+y2 <- y2[keep, , keep.lib.sizes = FALSE]
 ```
 
 ### Normalizing data {-}
@@ -267,8 +273,7 @@ these varying library sizes on the same scale so we can compare the samples.
 
 ```{r normal, message = FALSE}
 
-y2 <- calcNormFactors(y2, method="TMM")
-
+y2 <- calcNormFactors(y2, method = "TMM")
 ```
 
 ### Estimating biological variability between samples {-}
@@ -296,9 +301,9 @@ between 0.05-0.2.
 
 ```{r bcv, message = FALSE}
 
-y2 <- estimateDisp(y2, design, robust=TRUE)
+y2 <- estimateDisp(y2, design, robust = TRUE)
 
-bcv <-sqrt(y2$common.dispersion)
+bcv <- sqrt(y2$common.dispersion)
 
 bcv
 ```
@@ -330,14 +335,13 @@ goals so we can assist you in choosing the appropriate analysis tool.
 
 ``` {r test, message = FALSE, echo = FALSE}
 
-comparison <- makeContrasts(treated-untreated, levels=design)
+comparison <- makeContrasts(treated - untreated, levels = design)
 
-qlfit <-glmQLFit(y2, design, robust=TRUE)
+qlfit <- glmQLFit(y2, design, robust = TRUE)
 
 qlf <- glmQLFTest(qlfit, contrast = comparison)
 
-summary(decideTestsDGE(qlf, adjust.method="fdr", p.value=0.05)) 
-
+summary(decideTestsDGE(qlf, adjust.method = "fdr", p.value = 0.05))
 ```
 
 ### Results {-}
@@ -407,25 +411,27 @@ visualize is customizable based on your project with EICC.
 
 ```{r visualize, echo=FALSE, fig.height=4, fig.width=4, message=FALSE}
 
-logCPM <- cpm(y2, prior.count=2, log=TRUE)
+logCPM <- cpm(y2, prior.count = 2, log = TRUE)
 
 rownames(logCPM) <- rownames(y2$counts)
 
-colnames(logCPM) <- paste(y2$samples$group, sep="-")
+colnames(logCPM) <- paste(y2$samples$group, sep = "-")
 
 o <- order(qlf$table$PValue)
 
-logCPM <- logCPM[o[1:20],]
+logCPM <- logCPM[o[1:20], ]
 
 
-RdBu11 <-c("#053061", "#2166ac", "#4393c3", "#92c5de", "#d1e5f0", "#f7f7f7",
-                "#fddbc7", "#f4a582", "#d6604d", "#b2182b", "#67001f")
+RdBu11 <- c(
+  "#053061", "#2166ac", "#4393c3", "#92c5de", "#d1e5f0", "#f7f7f7",
+  "#fddbc7", "#f4a582", "#d6604d", "#b2182b", "#67001f"
+)
 
-#plot
+# plot
 coolmap(logCPM,
-        margins=c(8,8), 
-        col = RdBu11)
-
+  margins = c(8, 8),
+  col = RdBu11
+)
 ```
 
 Please note that these are sorted for convenience but the gene at the top of 
@@ -459,20 +465,21 @@ volcano <- as.data.frame(topTags(qlf, n = 7919))
 RdBu4 <- c("#92c5de", "#0571b0", "#f4a582", "#ca0020")
 
 EnhancedVolcano(volcano,
-                lab = row.names(volcano),
-                x = "logFC",
-                y = "FDR",
-                xlim = c(-5, 5),
-                title= NULL,
-                subtitle= "Log(2) Fold Change vs -log(10) q values",
-                FCcutoff = 1.0,
-                pCutoff = 0.05,
-                legendPosition = "bottom",
-                legendLabels =c("NS", "Log2 fold-change", "adj P-value",
-                         "adj P-value & Log2 fold-change"), 
-                col = RdBu4)
-
-
+  lab = row.names(volcano),
+  x = "logFC",
+  y = "FDR",
+  xlim = c(-5, 5),
+  title = NULL,
+  subtitle = "Log(2) Fold Change vs -log(10) q values",
+  FCcutoff = 1.0,
+  pCutoff = 0.05,
+  legendPosition = "bottom",
+  legendLabels = c(
+    "NS", "Log2 fold-change", "adj P-value",
+    "adj P-value & Log2 fold-change"
+  ),
+  col = RdBu4
+)
 ```
 
 There are many more functions and many more specifications to functions than 
@@ -490,6 +497,8 @@ our contact information available on our
 of the graphs we've made for previous clients 
 [here](https://github.com/EmoryIntegratedComputationalCore/Methods/blob/master/D
 ataVisualizationMenu.pdf).
+
+\newpage
 
 ### Session information and References {-}
 
